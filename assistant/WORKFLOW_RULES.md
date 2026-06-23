@@ -9,7 +9,7 @@ Purpose: keep the collaboration stable during long-context development.
 Messages may begin with phase markers using the canonical form:
 
 ```text
-「第 N 轮 [循环] [阶段] [第 M 小轮] 开始|结束」
+「第 N 轮 [循环] [阶段] [第 M 节] 开始|结束」
 ```
 
 Where:
@@ -17,7 +17,7 @@ Where:
 - `N` = round number (typically increments per major topic shift).
 - `[循环]` = optional, may be omitted in practice.
 - `阶段` = `讨论` (discussion) or `执行` (execution).
-- `第 M 小轮` = optional sub-round index; **atomic discrete batch** within a round.
+- `第 M 节` = optional sub-round index; **atomic discrete batch** within a round.
 - `开始|结束` = entry or exit marker.
 
 ### 1.1 Top-level phases
@@ -34,10 +34,10 @@ Where:
 Sub-rounds apply to **both** discussion and execution. Each sub-round is an **atomic discrete batch** — it does not "continue" a previous sub-round; you must end the old one and open a new one.
 
 ```text
-「第 N 轮讨论第 M 小轮开始」   — start a discrete batch in discussion (e.g., opinion feedback)
-「第 N 轮讨论第 M 小轮结束」   — end it
-「第 N 轮执行第 M 小轮开始」   — start a discrete batch in execution (e.g., primary scope work)
-「第 N 轮执行第 M 小轮结束」   — end it
+「第 N 轮讨论第 M 节开始」   — start a discrete batch in discussion (e.g., opinion feedback)
+「第 N 轮讨论第 M 节结束」   — end it
+「第 N 轮执行第 M 节开始」   — start a discrete batch in execution (e.g., primary scope work)
+「第 N 轮执行第 M 节结束」   — end it
 ```
 
 Common patterns:

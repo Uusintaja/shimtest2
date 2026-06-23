@@ -92,7 +92,7 @@ If you update one of the two documents, update the other in the same edit.
 ### 3.1 Canonical form
 
 ```text
-「第 N 轮 [循环] [阶段] [第 M 小轮] 开始|结束」
+「第 N 轮 [循环] [阶段] [第 M 节] 开始|结束」
 ```
 
 Where:
@@ -100,7 +100,7 @@ Where:
 - `N` = round number; typically increments per major topic shift.
 - `[循环]` = optional; may be omitted in practice.
 - `阶段` = `讨论` (discussion) or `执行` (execution).
-- `第 M 小轮` = optional sub-round index; an **atomic discrete batch** within a round.
+- `第 M 节` = optional sub-round index; an **atomic discrete batch** within a round.
 - `开始|结束` = entry or exit marker.
 
 ### 3.2 Top-level phase markers
@@ -119,10 +119,10 @@ Sub-rounds apply to **both** discussion and execution. Each sub-round is an
 must end the old one and open a new one.
 
 ```text
-「第 N 轮讨论第 M 小轮开始」   — start a discrete batch in discussion (e.g., opinion feedback)
-「第 N 轮讨论第 M 小轮结束」   — end it
-「第 N 轮执行第 M 小轮开始」   — start a discrete batch in execution (e.g., primary scope work)
-「第 N 轮执行第 M 小轮结束」   — end it
+「第 N 轮讨论第 M 节开始」   — start a discrete batch in discussion (e.g., opinion feedback)
+「第 N 轮讨论第 M 节结束」   — end it
+「第 N 轮执行第 M 节开始」   — start a discrete batch in execution (e.g., primary scope work)
+「第 N 轮执行第 M 节结束」   — end it
 ```
 
 Common patterns:
@@ -140,7 +140,7 @@ recording test results in `../CODE_REVIEW_TODO.md`), which is an
 Execution-phase property.
 
 Use the execution sub-round markers with the appropriate M-index. A typical
-feedback round is `「第 N 轮执行第 M 小轮开始」` followed by `「第 N 轮执行第 M 小轮结束」`.
+feedback round is `「第 N 轮执行第 M 节开始」` followed by `「第 N 轮执行第 M 节结束」`.
 
 ### 3.5 Anchor selection rule
 
@@ -162,10 +162,10 @@ and confirm which direction to take before acting.
 ### 3.6 Canonical parsing regex
 
 ```text
-「第\s*\d+\s*轮(\s*循环)?\s*(讨论|执行)(\s*第\s*\d+\s*小轮)?\s*(开始|结束)」
+「第\s*\d+\s*轮(\s*循环)?\s*(讨论|执行)(\s*第\s*\d+\s*节)?\s*(开始|结束)」
 ```
 
-Tolerates: optional whitespace, optional `循环`, optional `第 M 小轮`.
+Tolerates: optional whitespace, optional `循环`, optional `第 M 节`.
 
 ### 3.7 Max-rounds proposal (at the start of each phase's first sub-round)
 

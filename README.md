@@ -1,4 +1,4 @@
-# ConPTY Generic Wrapper - 0.2.0-rc2-dev
+# ConPTY Wrapper - 0.2.0-rc2-dev
 
 A Windows PowerShell 5.1 wrapper for line-oriented Windows console programs using ConPTY.
 

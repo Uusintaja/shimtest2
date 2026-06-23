@@ -6,22 +6,59 @@ Purpose: keep the collaboration stable during long-context development.
 
 ## 1. Phase anchors
 
-The user may start messages with phase markers such as:
+Messages may begin with phase markers using the canonical form:
 
 ```text
-「第 N 轮循环讨论开始」
-「第 N 轮循环执行第一小轮开始」
-「第 N 轮循环执行第二小轮结束」
+「第 N 轮 [循环] [阶段] [第 M 小轮] 开始|结束」
 ```
 
-Assistant must use the latest coherent phase marker as the primary instruction anchor.
+Where:
 
-If markers appear contradictory, reversed, duplicated, or inconsistent with the message content, assistant must explicitly point it out before acting.
+- `N` = round number (typically increments per major topic shift).
+- `[循环]` = optional, may be omitted in practice.
+- `阶段` = `讨论` (discussion) or `执行` (execution).
+- `第 M 小轮` = optional sub-round index; **atomic discrete batch** within a round.
+- `开始|结束` = entry or exit marker.
+
+### 1.1 Top-level phases
+
+| Marker | Meaning |
+|---|---|
+| `「第 N 轮讨论开始」` | Enter discussion round N |
+| `「第 N 轮讨论结束」` | Exit discussion round N |
+| `「第 N 轮执行开始」` | Enter execution round N |
+| `「第 N 轮执行结束」` | Exit execution round N |
+
+### 1.2 Sub-rounds
+
+Sub-rounds apply to **both** discussion and execution. Each sub-round is an **atomic discrete batch** — it does not "continue" a previous sub-round; you must end the old one and open a new one.
+
+```text
+「第 N 轮讨论第 M 小轮开始」   — start a discrete batch in discussion (e.g., opinion feedback)
+「第 N 轮讨论第 M 小轮结束」   — end it
+「第 N 轮执行第 M 小轮开始」   — start a discrete batch in execution (e.g., primary scope work)
+「第 N 轮执行第 M 小轮结束」   — end it
+```
+
+Common patterns:
+
+- Discussion sub-round 1: initial topic + proposals.
+- Discussion sub-round 2: opinion feedback on sub-round 1.
+- Execution sub-round 1: primary scope work.
+- Execution sub-round 2+: test feedback revisions or follow-up batches.
+
+### 1.3 Anchor selection
+
+Assistant must use the **latest coherent** phase marker as the primary instruction anchor.
+
+If markers are contradictory, reversed, duplicated, or inconsistent with message content, assistant must **explicitly point out the contradiction before acting**.
 
 Example:
 
 ```text
-用户写了“执行开始”和“执行结束”顺序矛盾时，先说明矛盾并确认当前应执行什么。
+When the user writes "execution start" and "execution end" in reversed order
+within the same message, the assistant must first explain the contradiction
+and confirm which direction to take before acting.
 ```
 
 ---
@@ -59,14 +96,36 @@ Do not expand execution scope without asking.
 
 ## 3. Working documents
 
-These may be updated frequently:
+### 3.1 Standard working documents
+
+These may be updated frequently, in either discussion or execution phase:
 
 ```text
-ROADMAP.md
-CODE_REVIEW_TODO.md
+ROADMAP.md            — project state and current step progress
+CODE_REVIEW_TODO.md   — code review loop items
 ```
 
-They are allowed in both discussion and execution phases.
+### 3.2 Assistant-state working documents (parking lot)
+
+`ROADMAP.md`, `CODE_REVIEW_TODO.md`, and `drift_report.md` (at project root)
+also serve as **out-of-scope parking lot**:
+
+- When a thought arises in a non-first sub-round that does not fit the
+  current round's framework, write it to one of these files.
+- Bring the entry up in the next round for analysis.
+- These files may be modified at any time, outside the discussion/execution
+  framework constraints (they are not subject to max-rounds scope control).
+
+**Equal priority** — choose by scenario, not by priority:
+
+| Scenario | File |
+|---|---|
+| Project-level "future work" / state | `ROADMAP.md` |
+| Code review observations | `CODE_REVIEW_TODO.md` |
+| Drift between docs and source | `drift_report.md` |
+
+Rationale: prevents scope creep without losing track of useful observations
+that surface during execution.
 
 ---
 
@@ -133,3 +192,35 @@ If user asks for analysis only, do not modify files.
 If user asks for execution, modify only the agreed files/areas.
 
 If context is long or ambiguous, prefer asking or explicitly stating assumptions before acting.
+
+---
+
+## 9. Max rounds proposal
+
+To prevent scope creep and runaway context bloat, the assistant proposes a
+**max sub-round count** at the start of **each phase's first sub-round**
+(both Discussion and Execution), not only at execution sub-round 1.
+
+Inputs to the proposal:
+
+- estimated complexity of the topic;
+- project state (how stale working docs are);
+- estimated number of file operations;
+- whether structural migrations are involved.
+
+Workflow:
+
+- The proposal is part of the current **Discussion** sub-round, not part of
+  execution authorization.
+- User accepts, adjusts, or rejects.
+- Both sides use the agreed number as a **soft constraint**: prefer to
+  converge within it, and explicitly justify any overshoot.
+- During subsequent sub-rounds, the assistant should **not re-propose** a
+  new max-rounds number; doing so defeats the soft-constraint purpose.
+- The agreed max-rounds number may still be **updated in working documents**
+  (e.g., a note in `ROADMAP.md` if circumstances change materially), but
+  this is recorded, not silently changed mid-round.
+
+Rationale: long execution chains blur scope, mix decisions across batches,
+and accumulate drift. A pre-committed sub-round count at the start of each
+phase forces both sides to converge.

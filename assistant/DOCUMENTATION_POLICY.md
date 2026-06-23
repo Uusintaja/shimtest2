@@ -149,6 +149,44 @@ Rules:
 
 ---
 
+### 2.5 Assistant-facing documents
+
+Location:
+
+```text
+assistant\
+```
+
+Audience: AI assistants that drive and maintain this project. Not for end users, operators, or external review agents.
+
+Purpose:
+
+- record collaboration profile;
+- record workflow / phase / mode-string protocol;
+- record documentation policy itself;
+- onboard new project-aware assistants.
+
+Examples:
+
+```text
+assistant\README.md                    — short index pointing to the four files below
+assistant\USER.md                      — user collaboration profile
+assistant\WORKFLOW_RULES.md            — workflow / phase / mode-string protocol
+assistant\DOCUMENTATION_POLICY.md      — this document
+assistant\ASSISTANT_ONBOARDING.md      — onboarding guide for new project-aware assistants
+```
+
+Rules:
+
+- These documents describe the **collaboration protocol**, not project behavior.
+- They may be updated when protocol genuinely changes; do not churn them per-task.
+- They are **not** subject to user-facing review and not part of release validation.
+- External review agents have their own protocol under `docs\review_agents\`.
+- `docs\review_agents\` (external agents) and `assistant\` (internal project-aware assistants) must remain separate: their audiences, protocols, and update cadences differ.
+- Naming note: this directory was originally named `agent\`; renamed to `assistant\` to avoid collision with the external-agent terminology already established by `docs\review_agents\`.
+
+---
+
 ## 3. Source of truth hierarchy
 
 For current 0.2.0-rc1 behavior:

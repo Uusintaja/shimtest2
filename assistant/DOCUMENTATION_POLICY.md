@@ -215,10 +215,13 @@ These are **equal-priority working docs** that may be modified at any time
 | Project-level "future work" / state | `ROADMAP.md` |
 | Code review observations | `CODE_REVIEW_TODO.md` |
 | Drift between docs and source | `drift_report.md` |
-| **Assistant process pitfalls (踩坑记录)** | **`assistant/PITFALLS.md`** (see §2.7) — **NOT** ROADMAP.md |
+| Assistant process pitfalls (踩坑记录) | `/PITFALLS.md` (project root, see §2.7) |
 
-The last row is **explicitly excluded** from `ROADMAP.md`: project-step
-status is not the same content as agent-process learnings.
+Assistant process pitfalls are **explicitly excluded** from `ROADMAP.md`:
+project-step status is not the same content as agent-process learnings.
+`PITFALLS.md` lives at the project root (alongside `ROADMAP.md`,
+`CODE_REVIEW_TODO.md`, `drift_report.md`) precisely because it is a
+working document of the same kind — frequently updated, equal priority.
 
 ---
 
@@ -227,7 +230,7 @@ status is not the same content as agent-process learnings.
 Location:
 
 ```text
-assistant\PITFALLS.md
+\PITFALLS.md           (project root)
 ```
 
 Audience: AI assistants (internal project-aware). Records **mistakes the

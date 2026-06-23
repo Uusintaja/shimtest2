@@ -21,7 +21,7 @@ Append new entries here. Use the format below; do not edit historical rows.
 | ID | Date | Type | Severity | Doc | Source / Other | Status |
 |----|------|------|----------|-----|----------------|--------|
 | DRIFT-001 | 2026-06-23 | doc-vs-source | high | docs/architecture/architecture_0.2.0-rc1.md | wrapper-csharphost.ps1 | Accepted |
-| DRIFT-002 | 2026-06-23 | naming-inconsistency | low | docs/review_agents/DOC_REVIEW_AGENT.md | (project naming convention) | Open |
+| DRIFT-002 | 2026-06-23 | naming-inconsistency | low | docs/review_agents/DOC_REVIEW_AGENT.md | (project naming convention) | Resolved |
 
 ---
 
@@ -57,23 +57,27 @@ Append new entries here. Use the format below; do not edit historical rows.
 
 - **Type:** `naming-inconsistency`
 - **Severity:** `low`
-- **Status:** Open
-- **Detected:** 2026-06-23 by AI assistant (sub-round 3, project-name unification pass).
+- **Status:** Resolved
+- **Detected:** 2026-06-23 by Lacuna (round 1 sub-round 3, project-name
+  unification pass).
 - **Locations:**
-  - Doc: `docs/review_agents/DOC_REVIEW_AGENT.md` line 3 and line 135
+  - Doc: `docs/review_agents/DOC_REVIEW_AGENT.md` line 3
   - Source of truth: project naming convention agreed in round 1 discussion
     (`ConPTY Wrapper`).
 - **Discrepancy:**
-  - `DOC_REVIEW_AGENT.md` uses `ConPTY Generic Wrapper` (old name).
+  - `DOC_REVIEW_AGENT.md` line 3 used `ConPTY Generic Wrapper` (old name).
   - After sub-round 3, `README.md`, `ROADMAP.md`,
-    `assistant/ASSISTANT_ONBOARDING.md`, and most release docs use
+    `assistant/ASSISTANT_ONBOARDING.md`, and most release docs used
     `ConPTY Wrapper` (new name).
+  - Note: the original DRIFT-002 entry also flagged line 135, but line 135
+    contains the literal `shimtest2` (the GitHub repo clone directory name,
+    not the project name). It was correctly left unchanged.
 - **Why this matters:** External review agents reading
-  `DOC_REVIEW_AGENT.md` will see the old name; minor confusion possible when
-  cross-referencing other project docs. The doc is an external-agent entry
-  point, so consistency matters more here than in a purely internal doc.
-- **Suggested resolution:** Update `DOC_REVIEW_AGENT.md` line 3 and line 135
-  to `ConPTY Wrapper`. Out of scope for sub-round 3; to be handled in a
-  future execution round (low priority because external review agents are
-  not the default workflow).
-- **Resolution record:** (pending)
+  `DOC_REVIEW_AGENT.md` saw the old name; minor confusion was possible when
+  cross-referencing other project docs.
+- **Suggested resolution:** Update `DOC_REVIEW_AGENT.md` line 3 to
+  `ConPTY Wrapper`.
+- **Resolution record:** Resolved in Round 3 Execution Section 1
+  (commit pending). Line 3 changed from `ConPTY Generic Wrapper` to
+  `ConPTY Wrapper`. Line 135 confirmed as a GitHub repo-name reference
+  (`shimtest2`), correctly left unchanged.

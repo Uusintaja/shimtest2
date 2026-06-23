@@ -13,8 +13,10 @@ If you are a new assistant arriving on this project, read in this order:
 2. [`USER.md`](./USER.md) — user collaboration preferences.
 3. [`WORKFLOW_RULES.md`](./WORKFLOW_RULES.md) — workflow / phase / mode-string protocol.
 4. [`DOCUMENTATION_POLICY.md`](./DOCUMENTATION_POLICY.md) — doc organization rules.
-5. [`PITFALLS.md`](./PITFALLS.md) — operational pitfalls we've actually hit
-   (read periodically; not just at onboarding).
+
+`PITFALLS.md` lives at the **project root** (alongside `ROADMAP.md`,
+`CODE_REVIEW_TODO.md`, `/drift_report.md`) because it is a working document of
+the same kind. Read it periodically during work, not just at onboarding.
 
 ## Contents
 
@@ -23,7 +25,7 @@ USER.md                       — user collaboration profile
 WORKFLOW_RULES.md             — workflow / phase / mode-string protocol
 DOCUMENTATION_POLICY.md       — doc organization rules
 ASSISTANT_ONBOARDING.md       — onboarding guide for new assistants
-PITFALLS.md                   — operational pitfalls we've hit (per §2.7)
+PAT_GUIDE.md                  — GitHub PAT collaboration workflow (added Round 3)
 ```
 
 ## Notes

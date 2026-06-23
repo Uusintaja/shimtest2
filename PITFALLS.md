@@ -94,3 +94,65 @@ are never deleted (status changes are recorded instead).
   location. After this PIT was detected, §2.6 (assistant-state working docs)
   and §2.7 (process learnings) were added to make this category explicit.
 - **Cross-reference:** PIT-001, PIT-002.
+
+---
+
+## PIT-004 — Terminology migration: "小轮" → "节"
+
+- **Detected:** 2026-06-23 by Lacuna (Round 3 Discussion)
+- **Category:** documentation / language clarity
+- **Status:** Mitigated
+- **Symptom:** The phrase `第 N 轮 第 M 小轮` contains two `轮` characters
+  in close proximity, which can confuse an AI agent parsing the
+  canonical mode-string pattern:
+  ```text
+  「第 N 轮 [循环] [阶段] [第 M 小轮] 开始|结束」
+  ```
+  The second `轮` is redundant once the first one establishes the
+  round-level context; replacing it with `节` (section) eliminates the
+  dual-`轮` ambiguity and lowers parse cost.
+- **Root cause:** Initial protocol design used `小轮` as the sub-round
+  token. The pairing `第 N 轮 ... 第 M 小轮` was readable for humans but
+  imposed extra cognitive load on agents segmenting the canonical form.
+- **Why this matters:** Mode-string parsing reliability directly affects
+  protocol adherence. Any ambiguity in the pattern risks incorrect
+  round/section attribution, which can cascade into scope confusion
+  (§9 max-rounds mechanics depend on accurate round/section tracking).
+- **Mitigation — terminology history note:**
+  > "第三轮讨论之前不存在节这个概念，它是由小轮变换而成的，
+  > 主要是通过简单的文本替换消除歧义并降低理解门槛"
+
+  Translation: before Round 3 Discussion, the concept of `节` did not
+  exist; it was created by transforming `小轮` via plain text substitution.
+  The substitution applies to both protocol documents (`WORKFLOW_RULES.md`,
+  `ASSISTANT_ONBOARDING.md`) and to the mode-string tokens themselves
+  (the canonical form and the parsing regex).
+
+- **Cross-reference:** Migration executed in Round 3 Execution Section 2
+  (this entry was added in Section 1 as historical anchor).
+
+---
+
+## PIT-005 — Missed §9 max-rounds proposal at start of round's first section
+
+- **Detected:** 2026-06-23 by Lacuna (Round 3 Discussion Section 2 self-review)
+- **Category:** protocol compliance
+- **Status:** Mitigated (acknowledged by user as transitional leniency)
+- **Symptom:** Round 3 Discussion Section 1 began without the assistant
+  proposing a max-section count, even though §9 of `WORKFLOW_RULES.md`
+  requires this proposal at the start of each phase's first sub-round.
+- **Root cause:** During the ongoing `小轮` → `节` terminology migration,
+  the assistant was mentally tracking the new term but had not yet updated
+  internal section-numbering habits. The first section of a new round is
+  a transition point where protocol execution is most error-prone.
+- **Why this matters:** §9 max-rounds is the primary mechanism preventing
+  runaway execution chains. Skipping it in a discussion round is lower
+  risk than in an execution round (no actual files are changed), but the
+  same lapse in execution could lead to unconstrained scope creep.
+- **Mitigation:** Treat the start of each phase's first section as a
+  **forced checkpoint**: explicitly propose max-rounds before opening any
+  topic analysis. If a topic analysis has already begun before this is
+  noticed, surface the omission immediately and propose before proceeding
+  further (as was done in Round 3 Discussion Section 2).
+- **Cross-reference:** Round 3 Discussion Section 2 contains the recovery
+  proposal; the user accepted max = 2 for Round 3 Execution.

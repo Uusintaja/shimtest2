@@ -302,9 +302,10 @@ The eight recurring pitfalls. Do not do these.
 
 The table above captures **abstract protocol rules**. Operational / process
 pitfalls the assistant has actually hit during prior rounds are recorded
-separately in [`PITFALLS.md`](./PITFALLS.md) (see
-[`DOCUMENTATION_POLICY.md`](./DOCUMENTATION_POLICY.md) §2.7). Read PITFALLS.md
-periodically to avoid repeating mistakes that have already cost cycles.
+separately in [`/PITFALLS.md`](../PITFALLS.md) at the project root (see
+[`DOCUMENTATION_POLICY.md`](./DOCUMENTATION_POLICY.md) §2.7). Read
+PITFALLS.md periodically to avoid repeating mistakes that have already
+cost cycles.
 
 ---
 

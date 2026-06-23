@@ -1,6 +1,6 @@
 # External Review Agent Guide
 
-Purpose: guide external agents reviewing the ConPTY Generic Wrapper project so they focus on high-value issues instead of re-litigating known design tradeoffs.
+Purpose: guide external agents reviewing the ConPTY Wrapper project so they focus on high-value issues instead of re-litigating known design tradeoffs.
 
 Baseline: `0.2.0-rc1`  
 Primary implementation: `wrapper-csharphost.ps1` / CSharpHost  

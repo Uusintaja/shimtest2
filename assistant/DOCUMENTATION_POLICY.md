@@ -187,6 +187,76 @@ Rules:
 
 ---
 
+### 2.6 Assistant-state working documents (parking lot)
+
+Location: **project root**, not under `assistant/` or `docs/`.
+
+Examples:
+
+```text
+ROADMAP.md              — project state and current step progress
+CODE_REVIEW_TODO.md     — code review loop items
+drift_report.md         — drift entries between docs and source
+```
+
+These are **equal-priority working docs** that may be modified at any time
+(both during and outside the discussion/execution framework). They serve a
+**dual purpose**:
+
+1. **Primary purpose** — track project state / review items / drift.
+2. **Secondary purpose (parking lot)** — absorb out-of-scope thoughts that
+   surface mid-execution but don't fit the current round's framework, so they
+   can be analyzed in a future round.
+
+**Critical rule:** choose the file by **scenario**, not by priority:
+
+| Scenario | File |
+|---|---|
+| Project-level "future work" / state | `ROADMAP.md` |
+| Code review observations | `CODE_REVIEW_TODO.md` |
+| Drift between docs and source | `drift_report.md` |
+| **Assistant process pitfalls (踩坑记录)** | **`assistant/PITFALLS.md`** (see §2.7) — **NOT** ROADMAP.md |
+
+The last row is **explicitly excluded** from `ROADMAP.md`: project-step
+status is not the same content as agent-process learnings.
+
+---
+
+### 2.7 Process learnings (agent pitfalls)
+
+Location:
+
+```text
+assistant\PITFALLS.md
+```
+
+Audience: AI assistants (internal project-aware). Records **mistakes the
+assistant has made** during prior rounds, with root-cause analysis and
+mitigations, so they are not repeated.
+
+**This is distinct from:**
+
+- **Fixed documents** (§2.2) — timeless project truths, not agent history.
+- **`ASSISTANT_ONBOARDING.md` §8 hard constraints** — abstract rules
+  distilled from the protocol.
+- **`drift_report.md`** — discrepancies between **project docs and source code**,
+  not between **assistant intent and assistant execution**.
+
+`PITFALLS.md` is for **operational / process** learnings: things like "git
+add did not stage modifications because I only added new files" or "renaming
+a file broke references because I did not scan markdown".
+
+Rules:
+
+- Each entry has a stable ID (`PIT-NNN`) and explicit status
+  (`Open` / `Mitigated` / `Resolved`).
+- New entries are appended; old entries are never deleted (status changes
+  are recorded instead).
+- This file may be modified at any time, like other assistant-state working
+  docs.
+
+---
+
 ## 3. Source of truth hierarchy
 
 For current 0.2.0-rc1 behavior:

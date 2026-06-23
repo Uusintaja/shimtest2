@@ -300,6 +300,12 @@ The eight recurring pitfalls. Do not do these.
 | 7 | Expand execution scope without asking | WORKFLOW_RULES §2, §8 |
 | 8 | Describe best-effort paths (Close / Logoff / Shutdown) as guaranteed | USER.md §5, DOCUMENTATION_POLICY §5 |
 
+The table above captures **abstract protocol rules**. Operational / process
+pitfalls the assistant has actually hit during prior rounds are recorded
+separately in [`PITFALLS.md`](./PITFALLS.md) (see
+[`DOCUMENTATION_POLICY.md`](./DOCUMENTATION_POLICY.md) §2.7). Read PITFALLS.md
+periodically to avoid repeating mistakes that have already cost cycles.
+
 ---
 
 ## 9. What you CAN do autonomously

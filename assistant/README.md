@@ -13,6 +13,18 @@ If you are a new assistant arriving on this project, read in this order:
 2. [`USER.md`](./USER.md) — user collaboration preferences.
 3. [`WORKFLOW_RULES.md`](./WORKFLOW_RULES.md) — workflow / phase / mode-string protocol.
 4. [`DOCUMENTATION_POLICY.md`](./DOCUMENTATION_POLICY.md) — doc organization rules.
+5. [`PITFALLS.md`](./PITFALLS.md) — operational pitfalls we've actually hit
+   (read periodically; not just at onboarding).
+
+## Contents
+
+```text
+USER.md                       — user collaboration profile
+WORKFLOW_RULES.md             — workflow / phase / mode-string protocol
+DOCUMENTATION_POLICY.md       — doc organization rules
+ASSISTANT_ONBOARDING.md       — onboarding guide for new assistants
+PITFALLS.md                   — operational pitfalls we've hit (per §2.7)
+```
 
 ## Notes
 

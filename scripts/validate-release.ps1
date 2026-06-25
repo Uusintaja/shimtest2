@@ -74,7 +74,7 @@ $requiredFiles = @(
     "docs\architecture\review.md",
     "docs\release\comparison_report.md",
     "docs\architecture\architecture_0.2.0-rc1.md",
-    "DOCUMENTATION_POLICY.md",
+    "assistant\DOCUMENTATION_POLICY.md",
     "docs\release\ADVISORY_NOTES.md",
     "scripts\run-tests.ps1",
     "scripts\test-boundary-runs.ps1",

@@ -182,7 +182,7 @@ docs\release\release_candidate_stabilization.md
 docs\release\RELEASE_CHECKLIST.md
 docs\release\FINAL_SIGNOFF_0.2.0-rc1.md
 docs\release\ADVISORY_NOTES.md
-DOCUMENTATION_POLICY.md
+assistant\DOCUMENTATION_POLICY.md
 CODING_GUIDELINES.md
 scripts\validate-release.ps1
 docs\review_agents\DOC_REVIEW_AGENT.md

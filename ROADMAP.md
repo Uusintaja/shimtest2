@@ -147,7 +147,7 @@ Purpose:
 ## Documentation restructuring
 Status: Done
 Output:
-- DOCUMENTATION_POLICY.md
+- assistant\DOCUMENTATION_POLICY.md
 - docs/architecture/architecture_0.2.0-rc1.md
 - docs/history/design_v2_legacy.md
 - docs/history/design_v2.md legacy notice

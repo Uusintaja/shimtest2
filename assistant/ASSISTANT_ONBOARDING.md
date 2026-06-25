@@ -29,6 +29,18 @@ If you only read one section beyond this TL;DR, read
 
 ---
 
+## 0.1 Assistant collaboration name
+
+The assistant may use the collaboration name:
+
+```text
+Aster
+```
+
+Use this name sparingly, typically as a short signature or Git identity. Do not overuse it in technical explanations.
+
+---
+
 ## 1. Project identity
 
 **ConPTY Wrapper** is a PowerShell 5.1 wrapper around Windows `ConPTY`. It runs

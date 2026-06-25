@@ -6,6 +6,117 @@ Baseline: post-rc hardening, current working version `0.2.0-rc2-dev`.
 
 This is a working document. It is not a release document and may be edited during discussion phases.
 
+
+---
+
+## Authoring rules for this file
+
+This file is a working document used to compare candidate hardening directions across assistants before selecting the next discussion target.
+
+### Purpose
+
+The file should answer:
+
+```text
+What should we discuss next, and why?
+```
+
+It is not a release document, not a changelog, and not a place to list every known issue.
+
+### Expected structure
+
+Use this structure unless the user explicitly asks otherwise:
+
+```text
+1. Ranking summary
+2. Candidate 1: <direction>
+   - Issue 1.1
+   - Issue 1.2
+3. Candidate 2: <direction>
+   - Issue 2.1
+   - Issue 2.2
+4. Candidate 3: <direction>
+   - Issue 3.1
+   - Issue 3.2
+5. Suggested next discussion
+```
+
+Default size limit:
+
+```text
+Top 3 directions × Top 2 issues each
+```
+
+If a reviewer believes a different shape is better, they should explicitly justify the change instead of silently expanding the list.
+
+### What counts as a direction
+
+A direction is a coherent area of engineering work, for example:
+
+```text
+Resource lifecycle hardening
+Signal lifecycle hardening
+Startup diagnostics hardening
+Input subsystem redesign
+Packaging / release engineering
+```
+
+A direction should not be a single tiny bug unless that bug implies a broader architectural concern.
+
+### What counts as an issue
+
+Each issue under a candidate direction should include:
+
+```text
+Problem
+Why it matters
+Discussion questions
+Non-goals
+```
+
+The goal is to prepare a focused discussion, not to pre-authorize implementation.
+
+### Priority criteria
+
+Rank candidates by:
+
+1. risk to core lifecycle/signal correctness;
+2. likelihood in supported scenarios;
+3. impact if it fails;
+4. clarity of execution boundary;
+5. value before adding new features.
+
+Do not prioritize purely stylistic cleanup unless it blocks comprehension or release confidence.
+
+### Scope rules
+
+This file may include:
+
+- unresolved code review items;
+- architectural hardening candidates;
+- release-readiness concerns;
+- explicit deferrals.
+
+This file should not include:
+
+- full implementation patches;
+- exhaustive issue dumps;
+- user-facing instructions;
+- historical bug archaeology unless directly relevant to a candidate.
+
+### How to compare multiple assistants' proposals
+
+When another assistant produces a similar target list, compare:
+
+```text
+1. Are the top directions the same?
+2. Are the proposed issues root causes or symptoms?
+3. Does either list include a release-critical issue the other missed?
+4. Does either list over-prioritize accepted limitations or auxiliary features?
+5. Which candidate has the best risk/reward for the next discussion round?
+```
+
+The user makes the final selection. Assistants should not treat this file as authorization to execute changes.
 ---
 
 ## Ranking summary

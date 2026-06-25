@@ -281,3 +281,20 @@ Purpose:
 - Rank next hardening directions before further execution.
 - Provide a compact target list for comparison with other assistant proposals.
 - Current recommended next discussion: Resource lifecycle hardening.
+
+
+## Step 10.7 - Resource lifecycle hardening
+Status: In Progress - implementation completed, validation pending
+Current working version: 0.2.0-rc2-dev
+
+Implemented:
+- best-effort handler now forces run termination through finally even when exceptions occur.
+- best-effort handler catch records errors and attempts safe kill when app is still alive.
+- Ctrl+C timeout kill path now closes ConPTY for output completion and performs a short diagnostic drain.
+
+Validation pending:
+- validate-release
+- ignore_ctrlc Ctrl+C timeout
+- repeated Ctrl+C / ignore_ctrlc
+- stdown Ctrl+C
+- Close/Shutdown smoke checks if convenient

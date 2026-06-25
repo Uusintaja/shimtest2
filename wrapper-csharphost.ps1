@@ -681,6 +681,8 @@ namespace CSharpWrapperHost_v020rc2dev
         private static readonly object LogFileLock = new object();
         private static readonly object AppOutputLogLock = new object();
         private static readonly object OutputDrainLock = new object();
+        private const int KillOutputDrainMilliseconds = 1000;
+        private const int KillOutputQuietMilliseconds = 100;
 
         private static double ElapsedMs(long startTimestamp)
         {
@@ -836,7 +838,24 @@ namespace CSharpWrapperHost_v020rc2dev
                     }
                     catch (Exception ex)
                     {
-                        try { Log(config, label + " best-effort path failed: " + ex, "ERROR"); } catch { }
+                        result.AddError(label + " best-effort path failed: " + ex);
+                        if (result.IsFinalState("Unknown")) result["FinalState"] = "Error";
+                        try
+                        {
+                            if (closeSession != null && !closeSession.HasExited())
+                            {
+                                closeSession.Kill();
+                                result["WasKilled"] = true;
+                            }
+                        }
+                        catch { }
+                        try { Log(config, label + " best-effort path failed; forcing run termination: " + ex, "ERROR"); } catch { }
+                    }
+                    finally
+                    {
+                        // Terminal best-effort event owns the lifecycle once bestEffortStarted is set.
+                        // Even if the handler fails internally, the main loop must be forced to exit.
+                        running = false;
                     }
                     return true;
                 };
@@ -977,9 +996,21 @@ namespace CSharpWrapperHost_v020rc2dev
                         {
                             session.Kill(); result["WasKilled"] = true; result["FinalState"] = "Killed";
                             Thread.Sleep(100); try { result["AppExitCode"] = session.GetExitCode(); } catch { }
+                            try
+                            {
+                                long killDrainStartPerf = Stopwatch.GetTimestamp();
+                                session.ClosePseudoConsoleForOutputCompletion();
+                                DrainOutputUntilComplete(config, session, true, KillOutputDrainMilliseconds, KillOutputQuietMilliseconds);
+                                Log(config, "CtrlC timeout kill output drain completed: durationMs=" + FmtMs(ElapsedMs(killDrainStartPerf)) + ", budgetMs=" + KillOutputDrainMilliseconds + ", quietMs=" + KillOutputQuietMilliseconds + ", outputEof=" + session.OutputEof + ", queueEmpty=" + session.OutputQueueIsEmpty, "WARN");
+                            }
+                            catch (Exception ex)
+                            {
+                                result.AddError("CtrlC timeout kill output drain failed: " + ex.Message);
+                                try { Log(config, "CtrlC timeout kill output drain failed: " + ex, "WARN"); } catch { }
+                            }
                             running = false;
                         }
-                        else { result["FinalState"] = "Timeout"; running = false; }
+                        else { result["FinalState"] = "Timeout"; try { result["AppExitCode"] = session.GetExitCode(); } catch { } running = false; }
                     }
 
                     Thread.Sleep(30);

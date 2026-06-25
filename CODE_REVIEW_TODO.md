@@ -53,6 +53,8 @@ Pending triage after current validation:
 
 ## Done
 
+- Best-effort exception completion guarantee implemented: handler catch records error, attempts safe kill, and finally forces `running=false`.
+- Ctrl+C timeout kill path now performs diagnostic output drain with internal 1000ms/100ms budget.
 - discuss_target.md created with top three next hardening directions and candidate issues.
 - Unsupported same-process concurrency negative test script added: scripts\test-unsupported-concurrent-run.ps1.
 - Boundary test parallel ExitCode null handling fixed; JSON result is used as source of truth if Process.ExitCode is unavailable.

@@ -270,3 +270,14 @@ Output:
 Purpose:
 - Prove that concurrent WrapperHost.Run calls inside the same PowerShell process fail safely with a clear structured error.
 - Document the supported concurrency model: use separate powershell.exe processes for concurrent wrappers.
+
+
+## Step 10.6 - Discussion target candidates
+Status: Done
+Output:
+- discuss_target.md
+
+Purpose:
+- Rank next hardening directions before further execution.
+- Provide a compact target list for comparison with other assistant proposals.
+- Current recommended next discussion: Resource lifecycle hardening.

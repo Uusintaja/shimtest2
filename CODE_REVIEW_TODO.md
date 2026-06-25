@@ -53,6 +53,7 @@ Pending triage after current validation:
 
 ## Done
 
+- discuss_target.md created with top three next hardening directions and candidate issues.
 - Unsupported same-process concurrency negative test script added: scripts\test-unsupported-concurrent-run.ps1.
 - Boundary test parallel ExitCode null handling fixed; JSON result is used as source of truth if Process.ExitCode is unavailable.
 - Boundary lifecycle test script added: scripts\test-boundary-runs.ps1.

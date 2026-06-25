@@ -1,565 +1,397 @@
-# Discussion Targets
+# Discussion Target Candidates
 
-## Purpose
+Purpose: prepare the next major code-hardening discussion by proposing
+a small number of high-value directions.
 
-This file is a **working document** (per
-`assistant/DOCUMENTATION_POLICY.md` §2.6: assistant-state working
-documents). It collects **code-level findings** discovered during code
-review of the wrapper implementation.
+Baseline: post-rc hardening, current working version `0.2.0-rc2-dev`.
 
-It is **read by**:
+This is a working document. It is **not** a release document, **not** a
+changelog, and **not** a comprehensive issue registry. For detailed
+findings with file:line evidence, see
+[`/code_review_findings.md`](./code_review_findings.md).
 
-- The AI assistant that maintains the project (currently me, "Lacuna").
-- The user, for cross-validation.
-- Another AI assistant working on the project (per Round 5 cross-validation
-  context).
+---
 
-It is **not** a place for fixes, feature requests, or design discussions.
-Those happen in execution rounds and (for design) in dedicated discussion
-rounds.
+## Authoring rules for this file (Lacuna's interpretation, Round 6)
 
-## Scope: what belongs here vs. elsewhere
+This section explains how this file is structured so that another
+assistant (cross-validation partner) or a future round can read it
+correctly, propose alternatives, and converge on the next discussion.
 
-| Category | File |
+### A1. Purpose and scope
+
+This file answers one question:
+
+> **What should we discuss next, and why?**
+
+It is a **planning doc**, not an evidence log. Each candidate is
+deliberately scoped to a discussion-friendly size: enough to anchor a
+real conversation, not enough to pre-authorize implementation.
+
+It is also explicitly **multi-assistant-aware**: when another agent
+proposes a different list, both lists are compared and the user
+chooses. The Authoring rules in this section are therefore open to
+revision if the user defines a different convention later.
+
+### A2. Size: top 3 directions x top 2 issues each
+
+Default:
+
+```
+Top 3 directions x Top 2 issues each = up to 6 issue units
+```
+
+If an assistant believes a different shape is appropriate (e.g., 2x3,
+or 4x2), they **must** justify the deviation in the Authoring rules
+section itself rather than silently expanding.
+
+Justifications I have considered and rejected:
+- **4x3 (12 issues)**: too many to discuss in one round; dilutes focus.
+- **2x2 (4 issues)**: too few; under-uses the planning slot.
+- **3x3 (9 issues)**: skewed; per-direction weight should match.
+
+### A3. Required fields per issue
+
+Each `### Issue N.M` block must contain:
+
+| Field | Purpose |
 |---|---|
-| **Code-level findings** (bugs, races, leaks, perf) | **`/discuss_target.md`** (this file) |
-| Process-level pitfalls (assistant mistakes in git, plan, docs) | `/PITFALLS.md` |
-| Doc-vs-source / doc-vs-doc drift | `/drift_report.md` |
-| Project state (Steps, statuses) | `/ROADMAP.md` |
-| Code review loop items | `/CODE_REVIEW_TODO.md` |
-| Fixed-bug history | `docs/release/comparison_report.md` §5 |
+| **Problem** | What the issue is, stated concretely (1-3 sentences). |
+| **Why it matters** | Impact in user-visible or correctness terms. |
+| **Discussion questions** | 2-4 questions to anchor the discussion. |
+| **Non-goals** | What this issue is **not** about (to bound scope). |
 
-When a finding in this file is **fixed**, the resolution record is added
-here AND the fix is documented in `comparison_report.md` §5 (per
-DOCUMENTATION_POLICY §4 "When fixing a bug").
+An additional optional field:
 
----
+- **Severity** (`critical` | `high` | `medium` | `low`) - included by
+  the author to signal priority. When two assistants disagree on
+  severity, the user resolves.
 
-## File rules (Lacuna's interpretation, Round 5 Execution §1)
+### A4. What counts as a "direction"
 
-This section is **meta**: it explains how this file is structured so
-that another assistant can read it correctly, add new findings, and
-resolve existing ones. If the user later defines a different convention,
-this section should be updated to match.
+A direction is a coherent area of engineering work, broad enough to
+support 2 specific issues but narrow enough that the user can pick
+"yes/no" on it. Examples:
 
-### R1. What belongs here
+- Resource lifecycle hardening (handles, threads, drain, kill)
+- Signal lifecycle hardening (router, window, deadlock paths)
+- Startup diagnostics hardening (entry-layer error reporting)
 
-A finding is a concrete, sourceable observation about:
+A direction should **not** be a single tiny bug unless that bug implies
+a broader architectural concern.
 
-- The **wrapper implementation** (`wrapper-csharphost.ps1`, including
-  the embedded C#).
-- The **shared PowerShell module** (`src/common.ps1`).
-- The **test programs** (`tests/*.c`) — though most test code is small
-  and unlikely to harbor bugs.
+### A5. What counts as an "issue"
 
-Every finding must be:
+Each issue under a direction should be:
 
-- **Sourceable**: every claim backed by `file:line` reference.
-- **Actionable**: at least one plausible fix direction is identified.
-- **Distinct** from process pitfalls and doc drift (see table above).
+- **Specific enough** to anchor a discussion (not "improve error
+  reporting" but "PowerShell startup has no structured error path").
+- **Bounded enough** that non-goals can be listed.
+- **Optional in implementation**: this file proposes, execution
+  rounds implement.
 
-### R2. What does NOT belong here
+### A6. Priority criteria (ranking)
 
-- **Process pitfalls**: "I forgot to use `git add -A`" → `/PITFALLS.md`,
-  not here. These are about the assistant's process, not the code.
-- **Doc-vs-source drift**: "architecture doc says namespace is _v020rc1
-  but source is _v020rc2dev" → `/drift_report.md`, not here.
-- **Feature requests**: "wrapper should support Unicode better" is a
-  new feature, not a finding. Goes to design discussion, not here.
-- **Working state** of the project: "Step 10.3 is in progress" → `/ROADMAP.md`.
-- **Code review loop items** that are not sourceable code issues →
-  `/CODE_REVIEW_TODO.md`.
+Rank candidates by:
 
-### R3. Entry template (normative)
+1. **Risk to core lifecycle / signal correctness** (release-blocking
+   issues first).
+2. **Likelihood in supported scenarios** (common scenarios beat
+   edge cases).
+3. **Impact if it fails** (silent corruption worse than loud error).
+4. **Clarity of execution boundary** (well-bounded fixes first).
+5. **Value before adding new features** (hardening before enhancement).
 
-Each `FIND-NNN` entry MUST use this template. Fields in `[brackets]` are
-optional; others are required.
+Do not prioritize purely stylistic cleanup unless it blocks
+comprehension or release confidence.
 
-```markdown
-### FIND-NNN — <short title, max ~10 words>
+### A7. What this file does NOT include
 
-- **Severity:** critical | high | medium | low
-- **Location:** `path/to/file` line range (required)
-- **Category:** bug | resource | race | perf | dead-code | doc-gap
-- **Description:** what the issue is, in 1–3 sentences (required)
-- **Trigger scenarios:** how the issue manifests in practice (required
-  for severity >= medium; recommended for all)
-- **Suggested fix direction:** high-level approach, **not the patch**
-  (required; the patch is written in a future execution round)
-- **Doc gap:** what docs say or don't say about this issue (recommended)
-- **Test interaction:** which test programs trigger or could trigger
-  (recommended for code-level findings)
-- **Source citation:** which round/section of collaboration produced
-  this finding (required for provenance)
-- **Status:** Open | Resolved | Deferred (default: Open)
-```
+- Implementation patches (no code in this file).
+- Exhaustive bug lists (those go in `/code_review_findings.md`).
+- User-facing instructions (those go in `README.md`).
+- Historical bug archaeology unless directly relevant to a candidate.
+- Style/naming preferences (those go in `assistant/` docs).
 
-Do **not** invent new fields without explicit reason. The cross-reference
-between assistant-readable clarity and human-readable brevity is
-already tight.
+### A8. How to cross-validate another assistant's proposal
 
-### R4. Update discipline
-
-- **Add** new findings with the next available `FIND-NNN` number. Never
-  reuse a retired ID.
-- **Resolve** by changing `**Status:** Open` to `**Status:** Resolved`
-  and appending a `Resolution record:` block at the end of the entry,
-  recording the round/section where the fix was applied and a one-line
-  summary.
-- **Defer** (rare): change `**Status:** Open` to `**Status:** Deferred`
-  with a reason. Revisit in a future round.
-- **Never delete** entries. They are historical record. Even if a
-  finding is superseded by another, keep the original with `**Status:**
-  Superseded by FIND-NNN+1` and a note.
-- **Never edit retroactively** without a justification note appended at
-  the end of the entry (e.g., "re-classified after further analysis in
-  Round 7 §2"). Original content must remain readable.
-
-### R5. Severity guidelines
-
-| Severity | When to use |
-|---|---|
-| **critical** | Causes deadlock, crash, data loss, or security issue. Must fix in the next execution round. |
-| **high** | Causes resource leak, incorrect behavior under realistic conditions, or race conditions with non-trivial probability. Should fix soon. |
-| **medium** | Performance issue, correctness edge case under unusual conditions, or code-quality issue with maintainability impact. |
-| **low** | Dead code, minor inefficiency, stylistic issue, or documentation gap that does not affect behavior. Cleanup. |
-
-**Severity is not permanent.** A finding's severity can be re-classified
-during further analysis (e.g., when a low-priority finding turns out to
-trigger under common conditions). When re-classifying, append a
-justification note per R4.
-
-### R6. Cross-reference conventions
-
-When a finding moves to a different lifecycle stage, **update related
-files** rather than duplicating content:
-
-- **Finding becomes a known deployment risk** (i.e., before it is fixed):
-  add to `docs/release/ADVISORY_NOTES.md` with reference back to the
-  `FIND-NNN` ID.
-- **Finding is fixed**: add to `docs/release/comparison_report.md` §5
-  as historical record. Update this entry's `**Status:**` to `Resolved`
-  and add a Resolution record.
-- **Finding reveals a hard constraint** the assistant should always
-  respect: add to `assistant/ASSISTANT_ONBOARDING.md` §8 (Hard
-  constraints table).
-- **Finding is upstream-suppressible** (e.g., test program bug, not
-  wrapper bug): update the relevant test program comment if applicable.
-
-### R7. What the assistant should NOT do in this file
-
-- **Do not modify the wrapper code from here.** This file is a discussion
-  target, not a fix log. Code changes happen in execution rounds.
-- **Do not move findings to other files unilaterally.** Use cross-reference,
-  not relocation.
-- **Do not invent FIND entries without source code evidence.** Every
-  claim must be backed by file:line.
-- **Do not retroactively change `Source citation`** (it's historical).
-- **Do not break the Summary table sync.** When you add a finding, also
-  add a row to the Summary table. When you resolve a finding, update
-  both the entry's status AND the table row.
-
-### R8. Expected lifecycle of a finding
+When another assistant (e.g., Aster) proposes a different `discuss_target.md`,
+compare systematically:
 
 ```
-Discovery (Discussion section of a code-review round)
-  → Filing (this file gets a new FIND-NNN entry)
-  → Cross-validation (user may share this file with another agent;
-    another agent's findings may overlap or contradict)
-  → Resolution planning (future Discussion section: design fix)
-  → Fix execution (future Execution section: modify code, update
-    this entry's Status to Resolved, add Resolution record, propagate
-    to comparison_report.md §5)
+1. Are the top 3 directions the same?
+2. Is severity annotation used? If so, does it agree?
+3. Are the proposed issues root causes or symptoms?
+4. Does either list include a release-critical issue the other missed?
+5. Does either list over-prioritize accepted limitations or
+   auxiliary features?
+6. Which candidate has the best risk/reward for the next round?
 ```
 
-A finding may also be **Deferred** (rare) or **Superseded** (by a
-newer finding) — see R4.
+The user makes the final selection. Assistants do not treat this file
+as authorization to execute changes.
+
+### A9. Lifecycle of this file
+
+```
+Discovery (current or recent code review)
+  -> Filing (this file gets a new candidate list)
+  -> Cross-validation (user may share with another assistant)
+  -> Discussion (next round's Discussion section picks a candidate)
+  -> Execution (next round's Execution section addresses it)
+  -> Resolution (fix applied; candidate marked "addressed" or
+    superseded in next revision of this file)
+```
+
+Each round typically rewrites this file in part or in whole. The
+complete file should always reflect **what is being discussed or
+about to be discussed**, not **what was already done** (that goes in
+`docs/release/comparison_report.md` S5).
 
 ---
 
-## How to read this file (for new readers)
+## Ranking summary
 
-After reading the meta section above, readers can navigate the file as:
+| Rank | Direction | Why it ranks here |
+|---:|---|---|
+| 1 | Resource lifecycle hardening | Includes a **critical** deadlock (Issue 1.1). Release-blocking. Execution boundary is well-defined (handles, drain, kill are localized). |
+| 2 | Signal lifecycle hardening | Includes a **high** thread-leak (Issue 2.1) and a **medium** concurrency pair (Issue 2.2). Important but architecturally less brittle than Issue 1.1. |
+| 3 | Startup diagnostics hardening | **Medium** issues but high user-visible impact. New deployment users hit this. No architectural risk; pure UX improvement. |
 
-1. **Title + Purpose** (top of file) — what this file is for.
-2. **File rules R1–R8** — how entries are structured and maintained.
-3. **FIND-001 onwards** — the actual findings, in numeric order. Each
-   entry is self-contained; readers do not need to read the meta section
-   again for each entry.
-4. **Summary table** — quick scan of all findings by ID, severity,
-   status.
-5. **Cross-reference index** — how this file relates to other docs.
-6. **Suggested execution priority** — proposed fix order (the user has
-   final say).
-7. **How to extend this file** — practical add/resolve instructions.
+Not selected for the next discussion (with brief reason):
 
----
-
-## FIND-001 — best-effort deadlock on exception (CRITICAL)
-
-- **Severity:** critical
-- **Location:** `wrapper-csharphost.ps1` lines ~770–820 (the
-  `bestEffortHandler` delegate inside `WrapperHost.Run`)
-- **Category:** bug (control flow / state machine)
-- **Description:** The `bestEffortHandler` delegate sets `running = false`
-  only inside its `try` block. If the `try` block throws (uncaught by an
-  inner `try`), control transfers to the outer `catch`, which logs but
-  does **not** reset `bestEffortStarted` or `running`. The main loop then
-  sees `bestEffortStarted == 1` perpetually and loops `Sleep(30); continue;`
-  forever, **deadlocking the wrapper**.
-- **Trigger scenarios:**
-  - `WaitForExit()` throws uncaught exception (rare but possible on
-    corrupted handle).
-  - Any uncaught exception in the best-effort `try` block
-    (e.g., from config key access, dictionary indexing on edge cases).
-  - Exception in `Kill()` or `GetExitCode()` not wrapped in inner `try`.
-- **Suggested fix direction:** Wrap the `try` body in a `finally` block
-  that always resets `bestEffortStarted = 0` and `running = false`. This
-  guarantees the main loop can exit even on exception. Inner `try/catch`
-  blocks can still log specific errors before the finally runs.
-- **Doc gap:** Not mentioned in `ADVISORY_NOTES.md`, `comparison_report.md`
-  §5 (fixed bugs), or `architecture_0.2.0-rc1.md` §11 (accepted
-  limitations). Completely undocumented.
-- **Test interaction:** Hard to verify deterministically. `bulk_output.c`
-  with manual close-window could expose it if a race triggers exception
-  in the handler. No existing test deliberately triggers this path.
-- **Source citation:** Round 5 Discussion §1, item A.1 (Lacuna).
-- **Status:** Open
+- Perf hardening (FIND-007 StripAnsi regex): auxiliary optimization,
+  not core correctness.
+- Dead code cleanup (FIND-003, 008, 011): quality of life, no release
+  risk.
+- Encoding fallback + Add-WrapperError perf (FIND-009, 010): low
+  priority.
 
 ---
 
-## FIND-002 — outputQueue unbounded growth (HIGH)
+## Candidate 1: Resource lifecycle hardening
 
-- **Severity:** high
-- **Location:** `wrapper-csharphost.ps1` `ConptySession` class —
-  `outputQueue` field (declared as `ConcurrentQueue<string>`, no size
-  cap) and `AppendAppOutputLog` (writes under `lock (AppOutputLogLock)`
-  — IO inside the lock).
-- **Category:** resource (memory leak risk)
-- **Description:** The reader thread enqueues output chunks faster than
-  the drainer can flush them (when `AppOutputLogFilePath` is slow, when
-  `Console.Write` blocks, when `bestEffortStarted == 1` blocks the
-  drainer's lock attempt). The queue grows without bound; in pathological
-  cases (bulk output + slow disk) memory can balloon to 100+ MB within
-  seconds.
-- **Trigger scenarios:**
-  - `bulk_output.c` (~1 MB output, 20000 lines) + `AppOutputLogFilePath`
-    pointing at slow disk / network drive.
-  - Output burst during `bestEffortStarted == 1` window (main loop
-    skips drain).
-  - App that intentionally produces high-volume output (bulk_output.exe
-    is a test, but real apps could be worse).
-- **Suggested fix direction:** Hard cap on queue size (e.g., 10 MB) +
-  drop-oldest strategy when exceeded. Record overflow count in
-  `result["OutputOverflowCount"]` for post-mortem. Move IO out of the
-  AppOutputLogLock (use StringBuilder inside lock, flush outside).
-- **Doc gap:** `ADVISORY_NOTES.md` §9 mentions reader error exposure
-  (`[wrapper-reader-error]` message) but does NOT mention queue growth
-  as a separate concern. Should be a new advisory.
-- **Test interaction:** `bulk_output.c` is the realistic trigger. To
-  expose the bug deliberately, point `AppOutputLogFilePath` at a slow
-  disk (network share, USB drive) and run bulk_output through the
-  wrapper. Verify queue size stays bounded.
-- **Source citation:** Round 5 Discussion §1, item B.1 (Lacuna).
-- **Status:** Open
+### Issue 1.1 (severity: critical): best-effort deadlock on uncaught exception
 
----
+- **Problem**: In `WrapperHost.Run`, the `bestEffortHandler` delegate
+  closes over `running` and `bestEffortStarted`. The handler's `try`
+  block sets `running = false` only at the end. If any exception
+  propagates out of `try` (e.g., uncaught from `WaitForExit`, `Kill`,
+  `GetExitCode`, or config-key access) without being swallowed by an
+  inner `try/catch`, control falls to the outer `catch`, which only
+  logs. `running` and `bestEffortStarted` are not reset. The main
+  loop's `if (bestEffortStarted == 1) { Sleep(30); continue; }` then
+  loops forever. The wrapper hangs.
+- **Why it matters**: This is a release-critical deadlock. Any single
+  exception in the best-effort path leaves the wrapper permanently
+  hung. Users see "best-effort path completed" or "best-effort path
+  failed" log lines but the process never exits. The sandbox may be
+  killed externally, but in interactive runs this means a frozen
+  terminal.
+- **Discussion questions**:
+  1. Should the `try` body be wrapped in a `finally` block that
+     unconditionally resets `bestEffortStarted = 0` and `running = false`?
+  2. Should inner `try/catch` blocks be added around every operation
+     inside the best-effort `try` (SendCtrlC, WaitForExit, Kill,
+     GetExitCode, DrainOutputBestEffort)?
+  3. After a best-effort failure, should the wrapper attempt a
+     secondary recovery (e.g., direct Kill without waiting)?
+  4. Should best-effort failures surface a distinct result status
+     (`FinalState = "Error"`) in addition to logging?
+- **Non-goals**:
+  - Do not redesign the entire signal-router architecture.
+  - Do not add new best-effort modes (CancelAndReissue remains reserved).
+  - Do not change the normal exit path's try/finally structure.
 
-## FIND-003 — WaitForOutputReaderExit is dead code (LOW)
+### Issue 1.2 (severity: medium): outputQueue unbounded growth under IO bottleneck
 
-- **Severity:** low
-- **Location:** `wrapper-csharphost.ps1` `ConptySession.WaitForOutputReaderExit(int milliseconds)`
-  method definition (~ line 510 of the embedded C#).
-- **Category:** dead-code
-- **Description:** The method `WaitForOutputReaderExit` is defined but
-  has **no callers** in the codebase. `ConptySession.Dispose()` does
-  not call it. `WrapperHost.Run()` finally block does not call it. The
-  method's existence suggests an intent (wait for reader thread to exit
-  before closing handles) that was never wired up. Currently the reader
-  thread is `IsBackground = true` so it does not block process exit,
-  but its termination order relative to Dispose is undefined.
-- **Trigger scenarios:** None — dead code by definition. Cleanup
-  benefit: removing or wiring up this method would clarify the reader
-  thread lifecycle.
-- **Suggested fix direction:** Two options:
-  - **α (call it):** Add `WaitForOutputReaderExit(1000)` to
-    `ConptySession.Dispose()` before closing handles.
-  - **β (delete):** Remove the method if explicit lifecycle management
-    is not needed (background thread handles termination at process
-    exit).
-- **Doc gap:** N/A — dead code does not require documentation.
-- **Test interaction:** N/A.
-- **Source citation:** Round 5 Discussion §1, item B.2 (Lacuna).
-- **Status:** Open
-
----
-
-## FIND-004 — ShutdownWindowRouter thread leak edge case (HIGH)
-
-- **Severity:** high
-- **Location:** `wrapper-csharphost.ps1` `ShutdownWindowRouter.Dispose()`
-  method (~ line 365 of the embedded C#).
-- **Category:** resource (thread leak under race condition)
-- **Description:** `ShutdownWindowRouter.Dispose()` sends `WM_QUIT` via
-  `PostThreadMessage` only if `threadId != 0`. If Dispose runs before
-  the thread has set `threadId` (i.e., before `Native.GetCurrentThreadId()`
-  in the thread lambda runs), the message is skipped. The fallback is a
-  1-second `Join(1000)`. If the thread is still alive after 1 second
-  (e.g., `Application.Run()` not yet responding to WM_QUIT), the thread
-  leaks. Repeated router creation without successful cleanup could
-  accumulate leaked threads (though all are `IsBackground = true`, so
-  process exit eventually cleans them).
-- **Trigger scenarios:**
-  - Dispose called immediately after `Start()` (before thread lambda
-    runs `GetCurrentThreadId`).
-  - `Application.Run()` takes >1s to respond to WM_QUIT.
-  - Multiple router creation/destruction cycles in same process.
-- **Suggested fix direction:** Use `Volatile.Read(ref threadId)` in
-  Dispose to ensure main thread sees the latest value. Or use
-  `Thread.Join(0)` first to check liveness, then conditionally
-  PostThreadMessage + Join(timeout). Alternatively, force the sentinel
-  window to close before joining.
-- **Doc gap:** `ADVISORY_NOTES.md` §2 mentions Windows Forms
-  dependency for ShutdownWindowRouter but does not detail thread
-  synchronization issues.
-- **Test interaction:** Hard to test deterministically. Requires
-  injecting a delay into the sentinel thread startup.
-- **Source citation:** Round 5 Discussion §1, item B.3 (Lacuna).
-- **Status:** Open
+- **Problem**: `ConptySession.outputQueue` (a `ConcurrentQueue<string>`)
+  has no size cap. The reader thread enqueues chunks at in-memory
+  speed; the drainer is throttled by `OutputDrainLock` contention and
+  by `AppendAppOutputLog` performing file IO **inside** that lock.
+  When `AppOutputLogFilePath` points to a slow disk or `bestEffortStarted`
+  is briefly held, the drainer stalls and the queue grows
+  unbounded. Under `bulk_output.exe` (20000 lines x ~50 chars = ~1 MB),
+  the queue can accumulate tens of MB within seconds.
+- **Why it matters**: Memory pressure + GC pauses + potential OOM in
+  pathological cases. Note that this is "auxiliary observability
+  overflow" (the `AppOutputLogFilePath` is classified as auxiliary in
+  `USER.md` S5 and `architecture_0.2.0-rc1.md` S11), so it is **not**
+  release-critical - but it affects long-running wrappers and would
+  surface as user-visible "wrapper hung" complaints.
+- **Discussion questions**:
+  1. Should the queue have a hard cap (e.g., 10 MB total or N
+     elements) with drop-oldest on overflow?
+  2. Should the overflow count be exposed in the JSON result
+     (`result["OutputOverflowCount"]`) so post-mortem analysis can
+     see it?
+  3. Should `AppendAppOutputLog` move IO out of the lock (use
+     `StringBuilder` inside lock, flush outside)?
+  4. What is the right threshold (size in bytes vs. count vs. time)?
+- **Non-goals**:
+  - Do not redesign the output pump state machine.
+  - Do not make `AppOutputLog` business-grade.
+  - Do not add per-line buffering that could lose ordering.
+  - Do not block the reader thread on backpressure (would create a
+     bidirectional ConPTY deadlock).
 
 ---
 
-## FIND-005 — `disposed` field not volatile in ConsoleSignalRouter (MEDIUM)
+## Candidate 2: Signal lifecycle hardening
 
-- **Severity:** medium
-- **Location:** `wrapper-csharphost.ps1` `ConsoleSignalRouter.disposed`
-  field (private, non-volatile).
-- **Category:** race (memory visibility)
-- **Description:** `Handle` reads `disposed` from a signal-handler
-  thread. `Dispose` writes it from the main thread. Without
-  `volatile`, the JIT may cache the value, so Handle may run on a
-  disposed router. Mitigated in practice by `Current = null` in Dispose
-  (the StaticHandler checks Current first) — but the optimization in
-  Handle is racy.
-- **Trigger scenarios:** Rapid dispose right before signal arrival.
-  Unlikely to cause user-visible bug due to Current=null mitigation.
-- **Suggested fix direction:** Add `volatile` keyword. One-line change.
-- **Doc gap:** N/A — implementation detail.
-- **Test interaction:** Hard to test without deliberate memory-model
-  testing.
-- **Source citation:** Round 5 Discussion §1, item C.2 (Lacuna).
-- **Status:** Open
+### Issue 2.1 (severity: high): ShutdownWindowRouter thread leak under early-Dispose race
 
----
+- **Problem**: `ShutdownWindowRouter.Dispose()` sends `WM_QUIT` via
+  `PostThreadMessage` only if `threadId != 0`. If `Dispose` runs before
+  the thread has set `threadId` (i.e., before
+  `Native.GetCurrentThreadId` in the thread lambda runs), the message
+  is skipped. The fallback is a 1-second `Thread.Join(1000)`. If the
+  sentinel's `Application.Run()` does not respond to `WM_QUIT` within
+  1 second (e.g., because a window message is mid-dispatch), the
+  thread leaks. The thread is `IsBackground = true`, so process exit
+  eventually cleans up - but the order of cleanup relative to
+  `Dispose` is undefined.
+- **Why it matters**: `ShutdownWindowRouter` is the **only** path for
+  `WM_QUERYENDSESSION`-based Logoff/Shutdown handling. If the
+  sentinel thread leaks or stalls, the OS shutdown handshake can
+  silently degrade, with no clear log message to indicate why
+  shutdown didn't proceed cleanly.
+- **Discussion questions**:
+  1. Should `Start()` use `Volatile.Write(ref threadId, ...)` to
+     publish to the main thread immediately?
+  2. Should `Dispose()` use `Volatile.Read(ref threadId)` +
+     `Thread.Join(0)` to check liveness before deciding WM_QUIT vs
+     Join(timeout)?
+  3. Should the sentinel window be forcibly closed (`DestroyWindow`
+     / `DestroyHandle`) before the join?
+  4. Should the `Start()` timeout (currently 1 second) be
+     configurable, or should failure be a hard startup error?
+- **Non-goals**:
+  - Do not implement a Win32-only non-WinForms hidden window.
+  - Do not implement CancelAndReissue shutdown.
+  - Do not change the supported `best-effort` semantics for
+    Close/Logoff/Shutdown (already documented in
+    `architecture_0.2.0-rc1.md` S11).
 
-## FIND-006 — TrySetTriggerReason non-atomic check-then-set (MEDIUM)
+### Issue 2.2 (severity: medium): ConsoleSignalRouter low-level concurrency gaps
 
-- **Severity:** medium
-- **Location:** `wrapper-csharphost.ps1` `ResultState.TrySetTriggerReason`
-  method (~ line 695 of embedded C#).
-- **Category:** race
-- **Description:** The method reads `values["TriggerReason"]`, checks if
-  it is null/"Unknown", then writes. Two threads (best-effort handler +
-  main loop normal-exit path) can both pass the check, both write. Last
-  write wins. The "first-wins" semantic documented in `ResultState` is
-  not enforced atomically.
-- **Trigger scenarios:** Race between best-effort handler setting
-  `TriggerReason = "CtrlClose"/"Shutdown"/"Logoff"` and main loop's
-  normal-exit path trying to set `TriggerReason = "AppExited"`.
-- **Suggested fix direction:** Use `ConcurrentDictionary.TryUpdate`
-  with the predicate "current value is null or 'Unknown'", set new
-  value if predicate holds. This is one atomic operation.
-- **Doc gap:** N/A — implementation detail.
-- **Test interaction:** Hard to test deterministically without
-  threading stress testing.
-- **Source citation:** Round 5 Discussion §1, item B.4 (Lacuna).
-- **Status:** Open
-
----
-
-## FIND-007 — StripAnsi regex compilation per call (MEDIUM)
-
-- **Severity:** medium
-- **Location:** `wrapper-csharphost.ps1` `WrapperHost.StripAnsi` method
-  (~ line 1130 of embedded C#).
-- **Category:** perf
-- **Description:** `Regex.Replace(s, pattern, "")` compiles the regex
-  each call. For high-volume output (bulk_output.exe, ~1 MB), 5 regex
-  compilations × 20000 lines = significant overhead. Also affects the
-  PowerShell `Remove-WrapperAnsiSequences` in `src/common.ps1` (when
-  that path is exercised).
-- **Trigger scenarios:** `bulk_output.c` with `StripAnsiSequences=$true`.
-- **Suggested fix direction:** Precompile patterns as
-  `static readonly Regex` fields. Compile-once-use-many.
-- **Doc gap:** N/A.
-- **Test interaction:** Direct measurement via `bulk_output.c` runs.
-- **Source citation:** Round 5 Discussion §1, item C.1 (Lacuna).
-- **Status:** Open
-
----
-
-## FIND-008 — PowerShell-side dead code in `src/common.ps1` (LOW)
-
-- **Severity:** low
-- **Location:** `src/common.ps1` functions:
-  - `Copy-WrapperHashtable` (~ line 70)
-  - `New-WrapperResult` (~ line 215)
-  - `Complete-WrapperResult` (~ line 240)
-  - `Remove-WrapperAnsiSequences` (~ line 290)
-- **Category:** dead-code (under CSharpHost mainline)
-- **Description:** These PowerShell functions are not called in the
-  CSharpHost path. They are kept for backwards compatibility with
-  `legacy/wrapper.ps1` (PowerShellMain) which is now archived per
-  USER.md §6. Either remove or move to `legacy/`.
-- **Trigger scenarios:** None in current path.
-- **Suggested fix direction:**
-  - **α Keep:** Leave in `src/common.ps1` for legacy compatibility.
-  - **β Move to `legacy/`:** Acknowledges "implementation-neutral"
-    contract is no longer in active use.
-  - **γ Delete:** PowerShellMain is archived; no need for compat.
-- **Doc gap:** `src/common.ps1` header comment says "Both implementations
-  must use the same config/result schema" but CSharpHost uses its own
-  C# schema (`ResultState`). Comment is stale.
-- **Test interaction:** N/A.
-- **Source citation:** Round 5 Discussion §1, item D.1 (Lacuna).
-- **Status:** Open
+- **Problem**: Two related concurrency issues in `ConsoleSignalRouter`
+  and `ResultState`:
+  - `disposed` field in `ConsoleSignalRouter` is **not** declared
+    `volatile`. `Handle` reads it from a signal-handler thread;
+    `Dispose` writes from main thread. JIT may cache the value.
+  - `ResultState.TrySetTriggerReason` does **non-atomic**
+    check-then-set. Best-effort handler and main-loop normal-exit
+    can both pass the check, both write. Last-write-wins, breaking
+    the documented "first-wins" semantic.
+  - The first is masked in practice by `Current = null` in Dispose
+    (the static `StaticHandler` checks `Current` first). The second
+    has no mitigation.
+- **Why it matters**: The second issue can produce inconsistent
+  `TriggerReason` values under concurrent signal/exit paths. The
+  first is theoretically a race but is currently masked. Both are
+  one-line fixes but indicate a need for a small concurrency pass.
+- **Discussion questions**:
+  1. Should `disposed` be declared `volatile`? (One-line fix.)
+  2. Should `TrySetTriggerReason` use
+     `ConcurrentDictionary.TryUpdate` for atomic check-and-set?
+  3. Should the `Current` pointer also be `volatile` (defense in
+     depth)?
+  4. Should we add lightweight stress tests for concurrent
+     signal/exit paths?
+- **Non-goals**:
+  - Do not support same-process concurrent `WrapperHost.Run`
+    (already documented as unsupported and tested by
+    `scripts/test-unsupported-concurrent-run.ps1`).
+  - Do not redesign the signal-router architecture.
+  - Do not introduce new signal types.
 
 ---
 
-## FIND-009 — `Get-WrapperTextEncoding` no fallback on invalid name (LOW)
+## Candidate 3: Startup diagnostics hardening
 
-- **Severity:** low
-- **Location:** `src/common.ps1` `Get-WrapperTextEncoding` (~ line 268).
-- **Category:** bug (error handling)
-- **Description:** The `default` branch calls
-  `[System.Text.Encoding]::GetEncoding($Name)`. If `$Name` is an invalid
-  encoding name, this throws `ArgumentException`. The wrapper would
-  fail to start with a confusing error.
-- **Trigger scenarios:** User config has invalid `OutputEncoding` or
-  `InputEncoding`.
-- **Suggested fix direction:** Wrap in `try/catch`, fall back to UTF-8
-  with a warning log.
-- **Doc gap:** N/A.
-- **Test interaction:** Direct — set `OutputEncoding = "invalid-name"`,
-  run wrapper, observe error.
-- **Source citation:** Round 5 Discussion §1, item D.2 (Lacuna).
-- **Status:** Open
+### Issue 3.1 (severity: medium): pre-CSharpHost startup has no structured error path
 
----
+- **Problem**: Before CSharpHost runs, the PowerShell entry layer
+  loads the config file (`$userConfig = . $ConfigPath`), merges
+  defaults (`Merge-WrapperConfig`), validates
+  (`Assert-WrapperConfig`), initializes directories
+  (`Initialize-WrapperDirectories`), compiles embedded C#
+  (`Add-CSharpHostType`), logs startup metadata, and builds argument
+  lines. Some of these steps can throw (e.g.,
+  `Assert-WrapperConfig` throws on invalid values, `Add-Type` fails
+  on missing references). When this happens, the user sees a raw
+  PowerShell error, **not** a structured JSON result.
+- **Why it matters**: Deployment users hitting these errors see
+  red-text PowerShell dumps, not the JSON their automation expects.
+  CI scripts that parse `JsonOutputPath` cannot detect startup
+  failures cleanly (the file is never written, exit code is
+  unpredictable).
+- **Discussion questions**:
+  1. Should the PowerShell entry layer create a minimal error
+     result BEFORE config validation, so the JSON path always
+     works?
+  2. Should `JsonOutputPath` be honored even for
+     startup/config/Add-Type failures?
+  3. What fields should a startup-failure JSON include? (Likely:
+     `TriggerReason`, `FinalState`, `Errors`, plus a new
+     `StartupStage` field.)
+  4. Should startup failures use exit code `1` while post-action
+     failures use `2`?
+- **Non-goals**:
+  - Do not change CSharpHost runtime behavior.
+  - Do not add a new config format.
+  - Do not add a separate startup-recovery code path.
+  - Do not attempt to recover from `Add-Type` failure (e.g., by
+     trying a precompiled fallback); fail fast with diagnostics.
 
-## FIND-010 — `Add-WrapperError` O(n²) array growth (LOW)
+### Issue 3.2 (severity: medium): Add-Type failure lacks actionable user guidance
 
-- **Severity:** low
-- **Location:** `src/common.ps1` `Add-WrapperError` (~ line 254).
-- **Category:** perf
-- **Description:** `$Result.Errors += @($Message)` creates a new array
-  each call. With N errors, total work is O(N²). Typical wrapper usage
-  has few errors (<10), so impact is negligible.
-- **Trigger scenarios:** Massive error count (hundreds). Unlikely in
-  practice.
-- **Suggested fix direction:** Use `List<string>` instead of array,
-  convert to array only at final `result.ToHashtable()` time. Or use
-  `ArrayList` (less idiomatic but works in PS 5.1).
-- **Doc gap:** N/A.
-- **Test interaction:** Synthetic — loop 1000 times, measure.
-- **Source citation:** Round 5 Discussion §1, item D.3 (Lacuna).
-- **Status:** Open
-
----
-
-## FIND-011 — `readerThread` never joined (LOW)
-
-- **Severity:** low
-- **Location:** `wrapper-csharphost.ps1` `ConptySession.Dispose()`
-  method (does not call `readerThread.Join` or
-  `WaitForOutputReaderExit`).
-- **Category:** resource (mild — relies on background thread)
-- **Description:** `Dispose` does not wait for the reader thread to exit.
-  The thread is `IsBackground = true`, so process exit will clean up.
-  But during wrapper run, the thread could still be reading after
-  Dispose returns. Order of cleanup is undefined.
-- **Trigger scenarios:** Process exit while reader is mid-ReadFile.
-- **Suggested fix direction:** Call `WaitForOutputReaderExit` in
-  Dispose (also addresses FIND-003). Or accept the undefined order
-  since it's harmless.
-- **Doc gap:** N/A.
-- **Test interaction:** Hard to observe without process instrumentation.
-- **Source citation:** Round 5 Discussion §1, item D.4 (Lacuna).
-- **Status:** Open
-
----
-
-## Summary table
-
-| ID | Severity | Title | Status |
-|----|----------|-------|--------|
-| FIND-001 | critical | best-effort deadlock on exception | Open |
-| FIND-002 | high | outputQueue unbounded growth | Open |
-| FIND-004 | high | ShutdownWindowRouter thread leak | Open |
-| FIND-005 | medium | `disposed` field not volatile | Open |
-| FIND-006 | medium | TrySetTriggerReason non-atomic | Open |
-| FIND-007 | medium | StripAnsi regex compilation per call | Open |
-| FIND-003 | low | WaitForOutputReaderExit dead code | Open |
-| FIND-008 | low | PowerShell-side dead code in common.ps1 | Open |
-| FIND-009 | low | Get-WrapperTextEncoding no fallback | Open |
-| FIND-010 | low | Add-WrapperError O(n²) | Open |
-| FIND-011 | low | readerThread never joined | Open |
+- **Problem**: CSharpHost depends on Windows PowerShell 5.1, .NET
+  Framework, and `System.Windows.Forms.dll` (for the shutdown
+  sentinel). If embedded C# compilation fails (missing assembly,
+  incompatible runtime, syntax error in C#), users receive a raw
+  compiler dump. This is the first failure a new deployment user
+  can hit - and the dump is hard for operators to act on.
+- **Why it matters**: A raw compiler dump doesn't tell the user
+  "you need Windows 10 1809+" or "your `System.Windows.Forms.dll` is
+  missing". Users can resolve the issue if given actionable hints;
+  they cannot if given only the original error.
+- **Discussion questions**:
+  1. Should `Add-Type` be wrapped in a `try/catch` that logs the
+     original error AND a friendly hint set?
+  2. Should the hint set mention: Windows PowerShell 5.1, .NET
+     Framework, Windows 10 1809+, and `System.Windows.Forms.dll`?
+  3. Should the failure produce JSON when `JsonOutputPath` is
+     provided?
+  4. Should `Add-Type` compile errors be categorized as
+     `StartupFailed` vs. `ScriptError`?
+- **Non-goals**:
+  - Do not split the embedded C# into a precompiled binary.
+  - Do not implement a WinForms-less fallback.
+  - Do not add a runtime assembly downloader.
+  - Do not hide the original compiler error (operators still need
+     it for debugging).
 
 ---
 
-## Cross-reference index
+## Suggested next discussion
 
-- **vs `architecture_0.2.0-rc1.md`**: No finding is mentioned in
-  architecture accepted limitations (§11) or future architecture work
-  (§12).
-- **vs `comparison_report.md` §5** (fixed bugs history): None of the
-  13 previously-fixed bugs correspond to these 11 findings — these
-  are **new** issues that arose during or after rc1.
-- **vs `ADVISORY_NOTES.md`** (10 advisories):
-  - §1 (Add-Type static state) — related to runtime compilation, not
-    FIND-001/002.
-  - §2 (Windows Forms dependency) — partially overlaps with FIND-004
-    but does not mention thread sync.
-  - §9 (Output reader error exposure) — partially overlaps with
-    FIND-002 (related to reader behavior) but does not mention queue
-    growth.
-  - The other advisories (§3-§8, §10) are unrelated.
+**Candidate 1: Resource lifecycle hardening** (specifically **Issue 1.1**).
 
-**Net effect**: most findings are entirely new and undocumented. ADVISORY_NOTES
-should be updated when these are addressed (in future rounds).
+Reasons:
 
----
+1. **Severity**: Issue 1.1 is `critical` - a deadlock is a
+   release-blocker. Issue 1.2 is `medium` and can ride along.
+2. **Execution boundary**: Both issues are localized to
+   `WrapperHost.Run` and `ConptySession.Dispose`. A single execution
+   sub-round can address them.
+3. **Test interaction**: `bulk_output.exe` is the realistic trigger
+   for Issue 1.2; Issue 1.1 needs a synthetic test (or a stress
+   test) to reproduce.
+4. **Architectural risk**: Both fixes are localized; they do not
+   require changing the signal-router or startup architectures.
 
-## Suggested execution priority (future rounds)
-
-| Priority | Finding | Suggested round |
-|----------|---------|-----------------|
-| P0 | FIND-001 | Round 6 Execution (must) |
-| P1 | FIND-002 | Round 6 Execution (must) |
-| P2 | FIND-004 | Round 7 Execution |
-| P3 | FIND-003 + FIND-011 | Round 7 Execution (cleanup) |
-| P4 | FIND-005, 006, 007 | Round 8+ (perf/quality) |
-| P5 | FIND-008, 009, 010 | Round 9+ (low priority) |
-
-**Note**: These are suggestions only. The user has final say on which
-findings to address and in what order.
-
----
-
-## How to extend this file
-
-When new findings are discovered (future code reviews, future
-collaborations with other agents, bug reports), append a new `FIND-NNN`
-section with the same template (per R3). Update the Summary table at the
-bottom. Update the Cross-reference index if related to docs.
-
-When a finding is resolved, change `**Status:** Open` to
-`**Status:** Resolved` and append a `Resolution record:` block at the end
-of the entry.
-
-When extending the meta section (R1–R8 above), keep the rules tight.
-Avoid adding fields or rules that duplicate existing ones. If a new rule
-is needed, label it R9, R10, ... and explain why it cannot be subsumed
-under existing rules.
-
-Do NOT delete or rewrite existing entries. They are historical record.
+If the user prefers to discuss Signal lifecycle instead, Candidate 2
+(Issue 2.1 specifically, the ShutdownWindowRouter thread leak) is the
+second-highest priority for the same reasons.

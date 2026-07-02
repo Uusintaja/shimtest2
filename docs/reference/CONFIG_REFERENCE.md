@@ -79,9 +79,25 @@ Supported values:
 | Key | Default | Status | Description |
 |---|---:|---|---|
 | `EnableCtrlCForwarding` | `$true` | Supported | Capture host Ctrl+C and send ETX `0x03` to ConPTY input. |
-| `CtrlCTimeoutSeconds` | `5` | Supported | Normal Ctrl+C wait budget before kill/timeout. |
+| `CtrlCGracePeriodMs` | policy-dependent | Supported | Grace period after forwarding Ctrl+C. If omitted: `Kill` policy uses 5000ms; `Continue` policy uses 1000ms. |
+| `CtrlCUnresponsivePolicy` | `"Kill"` | Supported | Action when app does not exit within CtrlC grace period: `Kill` or `Continue`. |
 | `EnableCtrlBreakEmergencyExit` | `$true` | Supported | Ctrl+Break is emergency abort, not forwarded as graceful Ctrl+C. |
 | `KillOnTimeout` | `$true` | Supported | Kill child on timeout in Ctrl+C/Close/Shutdown paths. |
+
+Ctrl+C unresponsive policy:
+
+```text
+Kill      -> timeout kills app and wrapper exits (default)
+Continue  -> timeout is logged, Ctrl+C guard resets, wrapper keeps running
+```
+
+Related result fields:
+
+```text
+CtrlCSentCount          # number of Ctrl+C signals forwarded to ConPTY
+CtrlCUnresponsiveCount  # number of Ctrl+C attempts that exceeded the grace period
+LastCtrlCSentAt         # wall-clock timestamp of the last forwarded Ctrl+C
+```
 
 ---
 

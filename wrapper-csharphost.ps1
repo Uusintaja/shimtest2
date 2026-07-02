@@ -607,7 +607,9 @@ namespace CSharpWrapperHost_v020rc2dev
             r.values["AppExitCode"] = null;
             r.values["WasKilled"] = false;
             r.values["TimedOut"] = false;
-            r.values["CtrlCSent"] = false;
+            r.values["CtrlCSentCount"] = 0;
+            r.values["CtrlCUnresponsiveCount"] = 0;
+            r.values["LastCtrlCSentAt"] = null;
             r.values["CloseEventReceived"] = false;
             r.values["ShutdownEventReceived"] = false;
             r.values["StdoutBytes"] = 0L;
@@ -617,14 +619,25 @@ namespace CSharpWrapperHost_v020rc2dev
             return r;
         }
 
-        public bool TryMarkCtrlCSent()
+        public bool TryBeginCtrlCAttempt()
         {
-            if (Interlocked.CompareExchange(ref ctrlCGuard, 1, 0) == 0)
-            {
-                values["CtrlCSent"] = true;
-                return true;
-            }
-            return false;
+            return Interlocked.CompareExchange(ref ctrlCGuard, 1, 0) == 0;
+        }
+
+        public void ResetCtrlCGuard()
+        {
+            Interlocked.Exchange(ref ctrlCGuard, 0);
+        }
+
+        public void RecordCtrlCSent(DateTime sentAt)
+        {
+            values.AddOrUpdate("CtrlCSentCount", 1, delegate(string key, object oldValue) { return Convert.ToInt32(oldValue) + 1; });
+            values["LastCtrlCSentAt"] = sentAt;
+        }
+
+        public void RecordCtrlCUnresponsive()
+        {
+            values.AddOrUpdate("CtrlCUnresponsiveCount", 1, delegate(string key, object oldValue) { return Convert.ToInt32(oldValue) + 1; });
         }
 
         public bool TrySetTriggerReason(string reason)
@@ -719,6 +732,7 @@ namespace CSharpWrapperHost_v020rc2dev
             bool inputUnavailableLogged = false;
             long ctrlCSentPerfTicks = 0;
             bool ctrlCSentPerfValid = false;
+            bool ctrlCAttemptActive = false;
             try
             {
                 string appPath = S(config, "AppPath", null);
@@ -776,11 +790,12 @@ namespace CSharpWrapperHost_v020rc2dev
                         result.TrySetTriggerReason(trigger);
                         if (closeSession != null && !closeSession.HasExited())
                         {
-                            if (result.TryMarkCtrlCSent())
+                            if (result.TryBeginCtrlCAttempt())
                             {
                                 try {
                                     long sendStartPerf = Stopwatch.GetTimestamp();
                                     closeSession.SendCtrlC();
+                                    result.RecordCtrlCSent(DateTime.Now);
                                     double sendLatencyMs = ElapsedMs(sendStartPerf);
                                     double sinceHandlerEntryMs = ElapsedMs(handlerEntryPerf);
                                     Log(config, trigger + " path sent ETX 0x03 to ConPTY input. sendLatencyMs=" + FmtMs(sendLatencyMs) + ", sinceHandlerEntryMs=" + FmtMs(sinceHandlerEntryMs), "WARN");
@@ -885,20 +900,23 @@ namespace CSharpWrapperHost_v020rc2dev
                         double signalQueueLatencyMs = ElapsedMs(signalEvent.PerfTicks, signalDequeuePerf);
                         if (sig == 0)
                         {
-                            if (result.TryMarkCtrlCSent())
+                            if (result.TryBeginCtrlCAttempt())
                             {
-                                int ctrlCTimeoutMs = I(config, "CtrlCTimeoutSeconds", 5) * 1000;
+                                string ctrlCPolicy = S(config, "CtrlCUnresponsivePolicy", "Kill");
+                                int defaultGraceMs = String.Equals(ctrlCPolicy, "Continue", StringComparison.OrdinalIgnoreCase) ? 1000 : 5000;
+                                int ctrlCGraceMs = I(config, "CtrlCGracePeriodMs", defaultGraceMs);
                                 Log(config, "CTRL_C_EVENT captured by CSharpHost. Forwarding ETX 0x03 to ConPTY input.", "INFO");
-                                Log(config, "CtrlC timing: signalQueueLatencyMs=" + FmtMs(signalQueueLatencyMs) + ", ctrlCTimeoutMs=" + ctrlCTimeoutMs, "INFO");
-                                result.TrySetTriggerReason("CtrlC");
+                                Log(config, "CtrlC timing: signalQueueLatencyMs=" + FmtMs(signalQueueLatencyMs) + ", ctrlCGraceMs=" + ctrlCGraceMs + ", ctrlCUnresponsivePolicy=" + ctrlCPolicy, "INFO");
                                 long sendStartPerf = Stopwatch.GetTimestamp();
                                 session.SendCtrlC();
+                                result.RecordCtrlCSent(DateTime.Now);
                                 long sendEndPerf = Stopwatch.GetTimestamp();
                                 double sendLatencyMs = ElapsedMs(sendStartPerf, sendEndPerf);
                                 ctrlCSentPerfTicks = sendEndPerf;
                                 ctrlCSentPerfValid = true;
+                                ctrlCAttemptActive = true;
                                 Log(config, "CtrlC path sent ETX 0x03 to ConPTY input. sendLatencyMs=" + FmtMs(sendLatencyMs) + ", sinceSignalDequeuedMs=" + FmtMs(ElapsedMs(signalDequeuePerf, sendEndPerf)), "INFO");
-                                ctrlCDeadlinePerfTicks = DeadlineFromNowMs(ctrlCTimeoutMs);
+                                ctrlCDeadlinePerfTicks = DeadlineFromNowMs(ctrlCGraceMs);
                                 ctrlCDeadlineActive = true;
                             }
                             else
@@ -966,11 +984,12 @@ namespace CSharpWrapperHost_v020rc2dev
                     if (session.HasExited())
                     {
                         result["AppExitCode"] = session.GetExitCode();
-                        if (ctrlCSentPerfValid && (result.IsTriggerReason("CtrlC") || result.IsTriggerReason("CtrlClose")))
+                        if (ctrlCSentPerfValid && (ctrlCAttemptActive || result.IsTriggerReason("CtrlClose")))
                         {
                             Log(config, "Signal response timing: appExitAfterCtrlCSentMs=" + FmtMs(ElapsedMs(ctrlCSentPerfTicks)), "INFO");
                         }
-                        result.TrySetTriggerReason("AppExited");
+                        if (ctrlCAttemptActive) result.TrySetTriggerReason("CtrlC");
+                        else result.TrySetTriggerReason("AppExited");
                         if (result.IsFinalState("Unknown")) result["FinalState"] = "Exited";
                         long normalDrainStartPerf = Stopwatch.GetTimestamp();
                         int normalDrainMs = Math.Max(0, I(config, "NormalExitOutputDrainMilliseconds", 10000));
@@ -988,29 +1007,42 @@ namespace CSharpWrapperHost_v020rc2dev
 
                     if (ctrlCDeadlineActive && Stopwatch.GetTimestamp() > ctrlCDeadlinePerfTicks)
                     {
-                        result["TimedOut"] = true;
-                        result.TrySetTriggerReason("Timeout");
-                        if (ctrlCSentPerfValid) Log(config, "CtrlC timeout timing: elapsedSinceCtrlCSentMs=" + FmtMs(ElapsedMs(ctrlCSentPerfTicks)), "WARN");
-                        Log(config, "App did not exit before trigger timeout. KillOnTimeout=" + B(config, "KillOnTimeout", true), "WARN");
-                        if (B(config, "KillOnTimeout", true))
+                        string ctrlCPolicy = S(config, "CtrlCUnresponsivePolicy", "Kill");
+                        result.RecordCtrlCUnresponsive();
+                        if (ctrlCSentPerfValid) Log(config, "CtrlC unresponsive timing: elapsedSinceCtrlCSentMs=" + FmtMs(ElapsedMs(ctrlCSentPerfTicks)) + ", policy=" + ctrlCPolicy, "WARN");
+                        if (String.Equals(ctrlCPolicy, "Continue", StringComparison.OrdinalIgnoreCase))
                         {
-                            session.Kill(); result["WasKilled"] = true; result["FinalState"] = "Killed";
-                            Thread.Sleep(100); try { result["AppExitCode"] = session.GetExitCode(); } catch { }
-                            try
-                            {
-                                long killDrainStartPerf = Stopwatch.GetTimestamp();
-                                session.ClosePseudoConsoleForOutputCompletion();
-                                DrainOutputUntilComplete(config, session, true, KillOutputDrainMilliseconds, KillOutputQuietMilliseconds);
-                                Log(config, "CtrlC timeout kill output drain completed: durationMs=" + FmtMs(ElapsedMs(killDrainStartPerf)) + ", budgetMs=" + KillOutputDrainMilliseconds + ", quietMs=" + KillOutputQuietMilliseconds + ", outputEof=" + session.OutputEof + ", queueEmpty=" + session.OutputQueueIsEmpty, "WARN");
-                            }
-                            catch (Exception ex)
-                            {
-                                result.AddError("CtrlC timeout kill output drain failed: " + ex.Message);
-                                try { Log(config, "CtrlC timeout kill output drain failed: " + ex, "WARN"); } catch { }
-                            }
-                            running = false;
+                            Log(config, "App did not exit within CtrlC grace period. CtrlCUnresponsivePolicy=Continue; wrapper remains running.", "WARN");
+                            ctrlCDeadlineActive = false;
+                            ctrlCAttemptActive = false;
+                            ctrlCSentPerfValid = false;
+                            result.ResetCtrlCGuard();
                         }
-                        else { result["FinalState"] = "Timeout"; try { result["AppExitCode"] = session.GetExitCode(); } catch { } running = false; }
+                        else
+                        {
+                            result["TimedOut"] = true;
+                            result.TrySetTriggerReason("CtrlC");
+                            Log(config, "App did not exit within CtrlC grace period. CtrlCUnresponsivePolicy=Kill, KillOnTimeout=" + B(config, "KillOnTimeout", true), "WARN");
+                            if (B(config, "KillOnTimeout", true))
+                            {
+                                session.Kill(); result["WasKilled"] = true; result["FinalState"] = "Killed";
+                                Thread.Sleep(100); try { result["AppExitCode"] = session.GetExitCode(); } catch { }
+                                try
+                                {
+                                    long killDrainStartPerf = Stopwatch.GetTimestamp();
+                                    session.ClosePseudoConsoleForOutputCompletion();
+                                    DrainOutputUntilComplete(config, session, true, KillOutputDrainMilliseconds, KillOutputQuietMilliseconds);
+                                    Log(config, "CtrlC timeout kill output drain completed: durationMs=" + FmtMs(ElapsedMs(killDrainStartPerf)) + ", budgetMs=" + KillOutputDrainMilliseconds + ", quietMs=" + KillOutputQuietMilliseconds + ", outputEof=" + session.OutputEof + ", queueEmpty=" + session.OutputQueueIsEmpty, "WARN");
+                                }
+                                catch (Exception ex)
+                                {
+                                    result.AddError("CtrlC timeout kill output drain failed: " + ex.Message);
+                                    try { Log(config, "CtrlC timeout kill output drain failed: " + ex, "WARN"); } catch { }
+                                }
+                                running = false;
+                            }
+                            else { result["FinalState"] = "Timeout"; try { result["AppExitCode"] = session.GetExitCode(); } catch { } running = false; }
+                        }
                     }
 
                     Thread.Sleep(30);

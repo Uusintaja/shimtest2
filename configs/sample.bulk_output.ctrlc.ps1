@@ -12,7 +12,8 @@ return @{
     StripAnsiSequences = $true
     InputMode = "None"
     EnableShutdownSentinel = $true
-    CtrlCTimeoutSeconds = 5
+    CtrlCGracePeriodMs = 5000
+    CtrlCUnresponsivePolicy = "Kill"
     PostActions = @(
         @{ Name="trigger reason is CtrlC"; Type="CustomPowerShell"; TreatFailureAsError=$true; ScriptBlock={ param($Config,$Result,$CapturedOutput) @{ Success = ([string]$Result.TriggerReason -eq "CtrlC"); Message = "TriggerReason=$($Result.TriggerReason)" } } },
         @{ Name="process exited by default Ctrl+C"; Type="CustomPowerShell"; TreatFailureAsError=$true; ScriptBlock={ param($Config,$Result,$CapturedOutput) @{ Success = ([int]$Result.AppExitCode -eq -1073741510); Message = "AppExitCode=$($Result.AppExitCode)" } } },

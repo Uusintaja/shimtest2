@@ -54,7 +54,10 @@ function New-WrapperDefaultConfig {
         InputMode = "Line" # None / Line supported in rc1; Char is reserved/experimental.
 
         # Timeouts and lifecycle
-        CtrlCTimeoutSeconds = 5
+        # Ctrl+C graceful-exit window. If null, CSharpHost chooses by CtrlCUnresponsivePolicy:
+        # Kill => 5000ms, Continue => 1000ms.
+        CtrlCGracePeriodMs = $null
+        CtrlCUnresponsivePolicy = "Kill" # Kill / Continue
         KillOnTimeout = $true
 
         # Signal handling
@@ -63,7 +66,7 @@ function New-WrapperDefaultConfig {
         EnableConsoleCloseHandling = $true
         # CTRL_CLOSE_EVENT is time-limited by Windows. These defaults reserve time for wrapper-side
         # minimal logging/kill/output-drain instead of spending the whole budget waiting for app exit.
-        # Dedicated close-event budget. Do not reuse CtrlCTimeoutSeconds here.
+        # Dedicated close-event budget. Do not reuse CtrlCGracePeriodMs here.
         # CTRL_CLOSE_EVENT is heavily time-limited; default app wait is intentionally short.
         CloseAppWaitMilliseconds = 2000
         CloseHandlerBudgetMilliseconds = 3000
@@ -175,7 +178,12 @@ function Assert-WrapperConfig {
         throw "Config.ShutdownMode must be one of: $($validShutdownModes -join ', '). Actual: $($Config.ShutdownMode). CancelAndReissue is reserved and not implemented in rc1."
     }
 
-    foreach ($name in @("CtrlCTimeoutSeconds", "CloseAppWaitMilliseconds", "CloseHandlerBudgetMilliseconds", "CloseReserveMilliseconds", "ShutdownAppWaitMilliseconds", "ShutdownHandlerBudgetMilliseconds", "ShutdownReserveMilliseconds", "NormalExitOutputDrainMilliseconds", "NormalExitOutputQuietMilliseconds")) {
+    $validCtrlCUnresponsivePolicies = @("Kill", "Continue")
+    if ($validCtrlCUnresponsivePolicies -notcontains [string]$Config.CtrlCUnresponsivePolicy) {
+        throw "Config.CtrlCUnresponsivePolicy must be one of: $($validCtrlCUnresponsivePolicies -join ', '). Actual: $($Config.CtrlCUnresponsivePolicy)"
+    }
+
+    foreach ($name in @("CtrlCGracePeriodMs", "CloseAppWaitMilliseconds", "CloseHandlerBudgetMilliseconds", "CloseReserveMilliseconds", "ShutdownAppWaitMilliseconds", "ShutdownHandlerBudgetMilliseconds", "ShutdownReserveMilliseconds", "NormalExitOutputDrainMilliseconds", "NormalExitOutputQuietMilliseconds")) {
         if ($Config.ContainsKey($name)) {
             $value = [int]$Config[$name]
             if ($value -lt 0) { throw "Config.$name must be >= 0. Actual: $value" }
@@ -264,7 +272,6 @@ function New-WrapperResult {
         WasKilled = $false
         TimedOut = $false
 
-        CtrlCSent = $false
         CloseEventReceived = $false
         ShutdownEventReceived = $false
 

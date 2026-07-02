@@ -53,6 +53,7 @@ Pending triage after current validation:
 
 ## Done
 
+- Ctrl+C unresponsive policy implemented: Kill/Continue, grace period config, ctrlc_counter test fixture.
 - Best-effort exception completion guarantee implemented: handler catch records error, attempts safe kill, and finally forces `running=false`.
 - Ctrl+C timeout kill path now performs diagnostic output drain with internal 1000ms/100ms budget.
 - discuss_target.md created with top three next hardening directions and candidate issues.

@@ -14,7 +14,8 @@ return @{
     OutputEncoding = "utf-8"
     InputEncoding = "utf-8"
     InputMode = "Line"
-    CtrlCTimeoutSeconds = 5
+    CtrlCGracePeriodMs = 5000
+    CtrlCUnresponsivePolicy = "Kill"
     KillOnTimeout = $true
     EnableShutdownSentinel = $true
     StripAnsiSequences = $true

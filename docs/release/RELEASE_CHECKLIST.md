@@ -127,7 +127,22 @@ Expected:
 - [ ] First run completes successfully.
 - [ ] Second concurrent same-process run is rejected with a clear structured error.
 
-### 3.4 Interactive matrix
+### 3.4 Ctrl+C Continue policy manual test
+
+```powershell
+.\wrapper-csharphost.ps1 `
+  -ConfigPath .\configs\sample.ctrlc_counter.ps1 `
+  -JsonOutputPath .\logs\result.ctrlc_counter.json
+```
+
+Expected:
+
+- [ ] Press Ctrl+C three times with short pauses.
+- [ ] App exits on third Ctrl+C.
+- [ ] `CtrlCSentCount >= 3`.
+- [ ] `CtrlCUnresponsiveCount >= 2`.
+
+### 3.5 Interactive matrix
 
 ```powershell
 .\scripts\run-tests.ps1 -Implementation CSharpHost -IncludeInteractive
@@ -149,7 +164,7 @@ Expected:
 - [ ] Start wrapped app.
 - [ ] Press Ctrl+C.
 - [ ] App receives Ctrl+C semantics.
-- [ ] App exits within `CtrlCTimeoutSeconds`.
+- [ ] App exits within `CtrlCGracePeriodMs` when CtrlCUnresponsivePolicy=Kill.
 - [ ] Result is written.
 - [ ] Normal-path `PostActions` run.
 
@@ -264,7 +279,7 @@ For a new app config:
 - [ ] `LogEnvironmentVariableValues = $false` unless debugging safe values.
 - [ ] `InputMode = "None"` for non-interactive service-style apps.
 - [ ] `InputMode = "Line"` only for basic line-oriented interactive apps.
-- [ ] `CtrlCTimeoutSeconds` reflects observed app graceful-exit time.
+- [ ] `CtrlCGracePeriodMs` reflects observed app graceful-exit time when set explicitly.
 - [ ] Close/Shutdown budgets are independent from Ctrl+C timeout.
 - [ ] Shutdown priority verification logs `actualLevel=0x3FF` and `verified=True`.
 - [ ] `NormalExitOutputDrainMilliseconds` reflects app's observed output tail time.

@@ -9,6 +9,7 @@ mkdir .\bin -Force
 x86_64-w64-mingw32-gcc .\tests\stdown.c -o .\bin\app.exe
 x86_64-w64-mingw32-gcc .\tests\echo_stdin.c -o .\bin\echo_stdin.exe
 x86_64-w64-mingw32-gcc .\tests\ignore_ctrlc.c -o .\bin\ignore_ctrlc.exe
+x86_64-w64-mingw32-gcc .\tests\ctrlc_counter.c -o .\bin\ctrlc_counter.exe
 x86_64-w64-mingw32-gcc .\tests\bulk_output.c -o .\bin\bulk_output.exe
 x86_64-w64-mingw32-gcc .\tests\stderr_output.c -o .\bin\stderr_output.exe
 x86_64-w64-mingw32-gcc .\tests\exit_code.c -o .\bin\exit_code.exe
@@ -25,6 +26,7 @@ mkdir bin
 cl /Fe:bin\app.exe tests\stdown.c
 cl /Fe:bin\echo_stdin.exe tests\echo_stdin.c
 cl /Fe:bin\ignore_ctrlc.exe tests\ignore_ctrlc.c
+cl /Fe:bin\ctrlc_counter.exe tests\ctrlc_counter.c
 cl /Fe:bin\bulk_output.exe tests\bulk_output.c
 cl /Fe:bin\stderr_output.exe tests\stderr_output.c
 cl /Fe:bin\exit_code.exe tests\exit_code.c

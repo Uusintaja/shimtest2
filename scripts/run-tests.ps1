@@ -38,6 +38,7 @@ $tests = @(
     @{ Name="args_env"; Config="configs\sample.args_env.ps1"; Interactive=$false; Notes="Argument and environment override/inheritance test" },
     @{ Name="stdown"; Config="configs\sample.stdown.ps1"; Interactive=$true; Notes="Press Ctrl+C after several counter lines" },
     @{ Name="ignore_ctrlc"; Config="configs\sample.ignore_ctrlc.ps1"; Interactive=$true; Notes="Press Ctrl+C; app ignores it; wrapper should kill after timeout" },
+    @{ Name="ctrlc_counter"; Config="configs\sample.ctrlc_counter.ps1"; Interactive=$true; Notes="Press Ctrl+C three times, waiting slightly more than 500ms between presses; app exits on third signal" },
     @{ Name="echo"; Config="configs\sample.echo.ps1"; Interactive=$true; Notes="Type some text, then quit" },
     @{ Name="bulk_output_ctrlc"; Config="configs\sample.bulk_output.ctrlc.ps1"; Interactive=$true; Notes="Press Ctrl+C during bulk output; default app exit 0xC000013A is expected" }
 )

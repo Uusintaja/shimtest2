@@ -298,3 +298,19 @@ Validation pending:
 - repeated Ctrl+C / ignore_ctrlc
 - stdown Ctrl+C
 - Close/Shutdown smoke checks if convenient
+
+
+## Step 10.8 - Ctrl+C unresponsive policy
+Status: In Progress - implementation completed, validation pending
+Current working version: 0.2.0-rc2-dev
+
+Implemented:
+- Added CtrlCUnresponsivePolicy = Kill / Continue.
+- Added CtrlCGracePeriodMs with policy-dependent defaults.
+- Added CtrlCSentCount, CtrlCUnresponsiveCount, LastCtrlCSentAt result fields.
+- Added tests/ctrlc_counter.c and configs/sample.ctrlc_counter.ps1.
+
+Validation pending:
+- compile ctrlc_counter.exe
+- sample.ctrlc_counter.ps1 manual test
+- validate-release

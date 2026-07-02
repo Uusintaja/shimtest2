@@ -262,7 +262,7 @@ Fix in 0.1.10:
 - `CloseHideWindowOnClose` was later removed from public configuration;
 - the close handler no longer hides/minimizes the console even if requested;
 - close app wait uses dedicated `CloseAppWaitMilliseconds` instead of reusing other timeout concepts;
-- Ctrl+C normal path remains independent and uses `CtrlCTimeoutSeconds`.
+- Ctrl+C normal path remains independent and now uses `CtrlCGracePeriodMs` / `CtrlCUnresponsivePolicy`.
 
 ### 5.10 Interactive test runner pause could be aborted by Ctrl+C
 

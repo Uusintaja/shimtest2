@@ -12,7 +12,8 @@ return @{
     InputEncoding = "utf-8"
     StripAnsiSequences = $true
     InputMode = "None"
-    CtrlCTimeoutSeconds = 2
+    CtrlCGracePeriodMs = 2000
+    CtrlCUnresponsivePolicy = "Kill"
     KillOnTimeout = $true
     EnableShutdownSentinel = $true
     PostActions = @(

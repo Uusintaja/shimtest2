@@ -95,10 +95,12 @@ $optionalFiles = @(
     "configs\sample.echo.ps1",
     "configs\sample.exit_code.ps1",
     "configs\sample.ignore_ctrlc.ps1",
+    "configs\sample.ctrlc_counter.ps1",
     "configs\sample.no_output_sleep.ps1",
     "configs\sample.stderr_output.ps1",
     "configs\vaultwarden.template.ps1",
     "tests\stdown.c",
+    "tests\ctrlc_counter.c",
     "tests\args_env.c"
 )
 foreach ($f in $optionalFiles) {

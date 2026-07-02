@@ -72,7 +72,8 @@ return @{
 
     # Validated vaultwarden Ctrl+C response is fast (~100ms on the user's real machine).
     # Keep 5s as a conservative normal-path budget.
-    CtrlCTimeoutSeconds = 5
+    CtrlCGracePeriodMs = 5000
+    CtrlCUnresponsivePolicy = "Kill"
 
     KillOnTimeout = $true
     EnableCtrlBreakEmergencyExit = $true

@@ -45,7 +45,8 @@ return @{
     # stdown.c does not read stdin, so None avoids unnecessary input thread during this test.
     InputMode = "None"
 
-    CtrlCTimeoutSeconds = 5
+    CtrlCGracePeriodMs = 5000
+    CtrlCUnresponsivePolicy = "Kill"
     KillOnTimeout = $true
 
     EnableCtrlCForwarding = $true

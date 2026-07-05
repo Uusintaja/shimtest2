@@ -91,6 +91,12 @@ Kill      -> timeout kills app and wrapper exits (default)
 Continue  -> timeout is logged, Ctrl+C guard resets, wrapper keeps running
 ```
 
+Ctrl+C send debounce:
+
+```text
+Continue mode allows repeated Ctrl+C forwarding, but sends are debounced internally by a short hardcoded interval to avoid accidental duplicate events.
+```
+
 Related result fields:
 
 ```text

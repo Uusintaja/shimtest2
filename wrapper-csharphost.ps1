@@ -696,6 +696,7 @@ namespace CSharpWrapperHost_v020rc2dev
         private static readonly object OutputDrainLock = new object();
         private const int KillOutputDrainMilliseconds = 1000;
         private const int KillOutputQuietMilliseconds = 100;
+        private const int CtrlCSendDebounceMilliseconds = 250;
 
         private static double ElapsedMs(long startTimestamp)
         {
@@ -733,6 +734,7 @@ namespace CSharpWrapperHost_v020rc2dev
             long ctrlCSentPerfTicks = 0;
             bool ctrlCSentPerfValid = false;
             bool ctrlCAttemptActive = false;
+            long ctrlCNextAllowedPerfTicks = 0;
             try
             {
                 string appPath = S(config, "AppPath", null);
@@ -796,6 +798,7 @@ namespace CSharpWrapperHost_v020rc2dev
                                     long sendStartPerf = Stopwatch.GetTimestamp();
                                     closeSession.SendCtrlC();
                                     result.RecordCtrlCSent(DateTime.Now);
+                                    Log(config, trigger + " Ctrl+C audit: CtrlCSentCount=" + Convert.ToString(result["CtrlCSentCount"]) + ", LastCtrlCSentAt=" + Convert.ToString(result["LastCtrlCSentAt"]), "WARN");
                                     double sendLatencyMs = ElapsedMs(sendStartPerf);
                                     double sinceHandlerEntryMs = ElapsedMs(handlerEntryPerf);
                                     Log(config, trigger + " path sent ETX 0x03 to ConPTY input. sendLatencyMs=" + FmtMs(sendLatencyMs) + ", sinceHandlerEntryMs=" + FmtMs(sinceHandlerEntryMs), "WARN");
@@ -900,13 +903,23 @@ namespace CSharpWrapperHost_v020rc2dev
                         double signalQueueLatencyMs = ElapsedMs(signalEvent.PerfTicks, signalDequeuePerf);
                         if (sig == 0)
                         {
-                            if (result.TryBeginCtrlCAttempt())
+                            string ctrlCPolicy = S(config, "CtrlCUnresponsivePolicy", "Kill");
+                            int defaultGraceMs = String.Equals(ctrlCPolicy, "Continue", StringComparison.OrdinalIgnoreCase) ? 1000 : 5000;
+                            int ctrlCGraceMs = I(config, "CtrlCGracePeriodMs", defaultGraceMs);
+                            long nowPerf = Stopwatch.GetTimestamp();
+                            bool canSendCtrlC = result.TryBeginCtrlCAttempt();
+                            if (!canSendCtrlC && String.Equals(ctrlCPolicy, "Continue", StringComparison.OrdinalIgnoreCase) && nowPerf >= ctrlCNextAllowedPerfTicks)
                             {
-                                string ctrlCPolicy = S(config, "CtrlCUnresponsivePolicy", "Kill");
-                                int defaultGraceMs = String.Equals(ctrlCPolicy, "Continue", StringComparison.OrdinalIgnoreCase) ? 1000 : 5000;
-                                int ctrlCGraceMs = I(config, "CtrlCGracePeriodMs", defaultGraceMs);
+                                // In Continue mode, Ctrl+C is a repeatable forwarded signal. The guard is
+                                // only a short debounce, not a grace-period gate.
+                                result.ResetCtrlCGuard();
+                                canSendCtrlC = result.TryBeginCtrlCAttempt();
+                            }
+
+                            if (canSendCtrlC)
+                            {
                                 Log(config, "CTRL_C_EVENT captured by CSharpHost. Forwarding ETX 0x03 to ConPTY input.", "INFO");
-                                Log(config, "CtrlC timing: signalQueueLatencyMs=" + FmtMs(signalQueueLatencyMs) + ", ctrlCGraceMs=" + ctrlCGraceMs + ", ctrlCUnresponsivePolicy=" + ctrlCPolicy, "INFO");
+                                Log(config, "CtrlC timing: signalQueueLatencyMs=" + FmtMs(signalQueueLatencyMs) + ", ctrlCGraceMs=" + ctrlCGraceMs + ", ctrlCUnresponsivePolicy=" + ctrlCPolicy + ", ctrlCSendDebounceMs=" + CtrlCSendDebounceMilliseconds, "INFO");
                                 long sendStartPerf = Stopwatch.GetTimestamp();
                                 session.SendCtrlC();
                                 result.RecordCtrlCSent(DateTime.Now);
@@ -915,13 +928,18 @@ namespace CSharpWrapperHost_v020rc2dev
                                 ctrlCSentPerfTicks = sendEndPerf;
                                 ctrlCSentPerfValid = true;
                                 ctrlCAttemptActive = true;
+                                ctrlCNextAllowedPerfTicks = DeadlineFromNowMs(CtrlCSendDebounceMilliseconds);
                                 Log(config, "CtrlC path sent ETX 0x03 to ConPTY input. sendLatencyMs=" + FmtMs(sendLatencyMs) + ", sinceSignalDequeuedMs=" + FmtMs(ElapsedMs(signalDequeuePerf, sendEndPerf)), "INFO");
+                                Log(config, "CtrlC audit: CtrlCSentCount=" + Convert.ToString(result["CtrlCSentCount"]) + ", LastCtrlCSentAt=" + Convert.ToString(result["LastCtrlCSentAt"]), "INFO");
                                 ctrlCDeadlinePerfTicks = DeadlineFromNowMs(ctrlCGraceMs);
                                 ctrlCDeadlineActive = true;
                             }
                             else
                             {
-                                Log(config, "Duplicate CTRL_C_EVENT captured while Ctrl+C is already being processed. Ignored by recursive-signal guard.", "INFO");
+                                if (String.Equals(ctrlCPolicy, "Continue", StringComparison.OrdinalIgnoreCase))
+                                    Log(config, "CTRL_C_EVENT captured but suppressed by Ctrl+C send debounce. No ETX sent.", "INFO");
+                                else
+                                    Log(config, "Duplicate CTRL_C_EVENT captured while Ctrl+C is already being processed. Ignored by recursive-signal guard.", "INFO");
                             }
                         }
                         else if (sig == 1)

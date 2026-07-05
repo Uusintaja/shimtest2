@@ -21,7 +21,6 @@ return @{
     PostActions = @(
         @{ Name="exit code is zero"; Type="ExitCodeEquals"; ExpectedExitCode=0; TreatFailureAsError=$true },
         @{ Name="triple ctrl+c threshold reached"; Type="RegexOutputContains"; Pattern="Triple Ctrl\+C threshold reached"; TreatFailureAsError=$true },
-        @{ Name="three ctrl+c sends recorded"; Type="CustomPowerShell"; TreatFailureAsError=$true; ScriptBlock={ param($Config,$Result,$CapturedOutput) @{ Success = ([int]$Result.CtrlCSentCount -ge 3); Message = "CtrlCSentCount=$($Result.CtrlCSentCount)" } } },
-        @{ Name="at least two ctrl+c unresponsive windows"; Type="CustomPowerShell"; TreatFailureAsError=$true; ScriptBlock={ param($Config,$Result,$CapturedOutput) @{ Success = ([int]$Result.CtrlCUnresponsiveCount -ge 2); Message = "CtrlCUnresponsiveCount=$($Result.CtrlCUnresponsiveCount)" } } }
+        @{ Name="three ctrl+c sends recorded"; Type="CustomPowerShell"; TreatFailureAsError=$true; ScriptBlock={ param($Config,$Result,$CapturedOutput) @{ Success = ([int]$Result.CtrlCSentCount -ge 3); Message = "CtrlCSentCount=$($Result.CtrlCSentCount)" } } }
     )
 }

@@ -102,7 +102,7 @@ Related result fields:
 ```text
 CtrlCSentCount          # number of Ctrl+C signals forwarded to ConPTY
 CtrlCUnresponsiveCount  # number of Ctrl+C attempts that exceeded the grace period
-LastCtrlCSentAt         # wall-clock timestamp of the last forwarded Ctrl+C
+LastCtrlCSentAt         # ISO 8601 wall-clock timestamp of the last forwarded Ctrl+C
 ```
 
 ---

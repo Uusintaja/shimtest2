@@ -629,10 +629,10 @@ namespace CSharpWrapperHost_v020rc2dev
             Interlocked.Exchange(ref ctrlCGuard, 0);
         }
 
-        public void RecordCtrlCSent(DateTime sentAt)
+        public void RecordCtrlCSent(DateTimeOffset sentAt)
         {
             values.AddOrUpdate("CtrlCSentCount", 1, delegate(string key, object oldValue) { return Convert.ToInt32(oldValue) + 1; });
-            values["LastCtrlCSentAt"] = sentAt;
+            values["LastCtrlCSentAt"] = sentAt.ToString("o", CultureInfo.InvariantCulture);
         }
 
         public void RecordCtrlCUnresponsive()
@@ -797,7 +797,7 @@ namespace CSharpWrapperHost_v020rc2dev
                                 try {
                                     long sendStartPerf = Stopwatch.GetTimestamp();
                                     closeSession.SendCtrlC();
-                                    result.RecordCtrlCSent(DateTime.Now);
+                                    result.RecordCtrlCSent(DateTimeOffset.Now);
                                     Log(config, trigger + " Ctrl+C audit: CtrlCSentCount=" + Convert.ToString(result["CtrlCSentCount"]) + ", LastCtrlCSentAt=" + Convert.ToString(result["LastCtrlCSentAt"]), "WARN");
                                     double sendLatencyMs = ElapsedMs(sendStartPerf);
                                     double sinceHandlerEntryMs = ElapsedMs(handlerEntryPerf);
@@ -922,7 +922,7 @@ namespace CSharpWrapperHost_v020rc2dev
                                 Log(config, "CtrlC timing: signalQueueLatencyMs=" + FmtMs(signalQueueLatencyMs) + ", ctrlCGraceMs=" + ctrlCGraceMs + ", ctrlCUnresponsivePolicy=" + ctrlCPolicy + ", ctrlCSendDebounceMs=" + CtrlCSendDebounceMilliseconds, "INFO");
                                 long sendStartPerf = Stopwatch.GetTimestamp();
                                 session.SendCtrlC();
-                                result.RecordCtrlCSent(DateTime.Now);
+                                result.RecordCtrlCSent(DateTimeOffset.Now);
                                 long sendEndPerf = Stopwatch.GetTimestamp();
                                 double sendLatencyMs = ElapsedMs(sendStartPerf, sendEndPerf);
                                 ctrlCSentPerfTicks = sendEndPerf;

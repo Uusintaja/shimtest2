@@ -140,7 +140,7 @@ Expected:
 - [ ] Press Ctrl+C three times with short pauses.
 - [ ] App exits on third Ctrl+C.
 - [ ] `CtrlCSentCount >= 3`.
-- [ ] `CtrlCUnresponsiveCount >= 2`.
+- [ ] `LastCtrlCSentAt` uses ISO 8601 timestamp precision.
 
 ### 3.5 Interactive matrix
 

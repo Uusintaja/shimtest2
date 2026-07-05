@@ -308,6 +308,7 @@ Implemented:
 - Added CtrlCUnresponsivePolicy = Kill / Continue.
 - Added CtrlCGracePeriodMs with policy-dependent defaults.
 - Added CtrlCSentCount, CtrlCUnresponsiveCount, LastCtrlCSentAt result fields.
+- LastCtrlCSentAt now records an ISO 8601 timestamp for sub-second audit clarity.
 - Added tests/ctrlc_counter.c and configs/sample.ctrlc_counter.ps1.
 
 Validation pending:

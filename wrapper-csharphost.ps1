@@ -695,7 +695,7 @@ namespace CSharpWrapperHost_v020rc2dev
         {
             DateTime end = DateTime.Now;
             values["EndTime"] = end;
-            values["CoreDurationMs"] = (long)ElapsedMs(startPerfTicks);
+            values["CoreDurationMs"] = (long)((Stopwatch.GetTimestamp() - startPerfTicks) * 1000.0 / Stopwatch.Frequency);
             if (IsWrapperState("Unknown")) values["WrapperState"] = "Completed";
         }
 

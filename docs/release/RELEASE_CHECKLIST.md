@@ -92,7 +92,7 @@ Expected:
 
 - [ ] Ctrl+C exits app cleanly.
 - [ ] `PostActions` pass.
-- [ ] JSON result contains `WrapperVersion = 0.2.0-rc1`.
+- [ ] JSON result contains `Metadata.WrapperVersion` matching the expected version.
 - [ ] Wrapper log contains `RunId`.
 
 ### 3.2 Non-interactive matrix
@@ -256,7 +256,7 @@ For each run, wrapper log should include:
 
 Normal path should also include:
 
-- [ ] `PostActions timing`.
+- [ ] `PostActions timing` or `PostActions.DurationMs`.
 - [ ] `Wrapper PowerShell post-actions ended`.
 
 Best-effort paths may include:

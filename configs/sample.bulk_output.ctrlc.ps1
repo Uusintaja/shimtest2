@@ -15,8 +15,8 @@ return @{
     CtrlCGracePeriodMs = 5000
     CtrlCUnresponsivePolicy = "Kill"
     PostActions = @(
-        @{ Name="trigger reason is CtrlC"; Type="CustomPowerShell"; TreatFailureAsError=$true; ScriptBlock={ param($Config,$Result,$CapturedOutput) @{ Success = ([string]$Result.TriggerReason -eq "CtrlC"); Message = "TriggerReason=$($Result.TriggerReason)" } } },
-        @{ Name="process exited by default Ctrl+C"; Type="CustomPowerShell"; TreatFailureAsError=$true; ScriptBlock={ param($Config,$Result,$CapturedOutput) @{ Success = ([int]$Result.AppExitCode -eq -1073741510); Message = "AppExitCode=$($Result.AppExitCode)" } } },
-        @{ Name="not killed by wrapper"; Type="CustomPowerShell"; TreatFailureAsError=$true; ScriptBlock={ param($Config,$Result,$CapturedOutput) @{ Success = (-not [bool]$Result.WasKilled -and -not [bool]$Result.TimedOut); Message = "WasKilled=$($Result.WasKilled), TimedOut=$($Result.TimedOut)" } } }
+        @{ Name="trigger reason is CtrlC"; Type="CustomPowerShell"; TreatFailureAsError=$true; ScriptBlock={ param($Config,$Result,$CapturedOutput) @{ Success = ([string]$Result.TerminalTrigger.Kind -eq "CtrlC"); Message = "TerminalTrigger=$($Result.TerminalTrigger.Kind)" } } },
+        @{ Name="process exited by default Ctrl+C"; Type="CustomPowerShell"; TreatFailureAsError=$true; ScriptBlock={ param($Config,$Result,$CapturedOutput) @{ Success = ([int]$Result.AppState.ExitCode -eq -1073741510); Message = "AppExitCode=$($Result.AppState.ExitCode)" } } },
+        @{ Name="not killed by wrapper"; Type="CustomPowerShell"; TreatFailureAsError=$true; ScriptBlock={ param($Config,$Result,$CapturedOutput) @{ Success = (-not [bool]$Result.AppState.WasKilled -and -not [bool]$Result.AppState.GracefulExitTimedOut); Message = "WasKilled=$($Result.AppState.WasKilled), GracefulExitTimedOut=$($Result.AppState.GracefulExitTimedOut)" } } }
     )
 }

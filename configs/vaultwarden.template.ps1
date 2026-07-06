@@ -75,7 +75,6 @@ return @{
     CtrlCGracePeriodMs = 5000
     CtrlCUnresponsivePolicy = "Kill"
 
-    KillOnTimeout = $true
     EnableCtrlBreakEmergencyExit = $true
 
     EnableConsoleCloseHandling = $true

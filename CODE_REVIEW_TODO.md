@@ -53,6 +53,7 @@ Pending triage after current validation:
 
 ## Done
 
+- RunRecord schema restructuring implemented: Metadata, EventAudit, TerminalTrigger, AppState, WrapperState, PostActions.
 - LastCtrlCSentAt precision improved to ISO 8601 string for Ctrl+C audit logs/results.
 - Ctrl+C unresponsive policy implemented: Kill/Continue, grace period config, ctrlc_counter test fixture.
 - Best-effort exception completion guarantee implemented: handler catch records error, attempts safe kill, and finally forces `running=false`.

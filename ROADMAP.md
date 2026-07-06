@@ -315,3 +315,21 @@ Validation pending:
 - compile ctrlc_counter.exe
 - sample.ctrlc_counter.ps1 manual test
 - validate-release
+
+
+## Step 10.9 - RunRecord schema restructuring
+Status: In Progress - implementation completed, validation pending
+Current working version: 0.2.0-rc2-dev
+
+Implemented:
+- Replaced flat result schema with RunRecord objects: Metadata, EventAudit, TerminalTrigger, AppState, WrapperState, PostActions.
+- Removed active TriggerReason/FinalState/root AppExitCode/root WasKilled/root TimedOut schema.
+- Kept StdoutBytes and OutputLines at root for future IO model work.
+
+Validation pending:
+- validate-release
+- run-tests non-interactive
+- stdown Ctrl+C
+- ignore_ctrlc kill path
+- ctrlc_counter continue path
+- boundary tests if time permits

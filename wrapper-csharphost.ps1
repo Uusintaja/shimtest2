@@ -583,8 +583,9 @@ namespace CSharpWrapperHost_v020rc2dev
     internal sealed class ResultState
     {
         private readonly ConcurrentDictionary<string, object> values = new ConcurrentDictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-        private readonly ConcurrentQueue<string> errors = new ConcurrentQueue<string>();
+        private readonly ConcurrentQueue<string> wrapperErrors = new ConcurrentQueue<string>();
         private int ctrlCGuard;
+        private readonly long startPerfTicks;
 
         public object this[string key]
         {
@@ -594,29 +595,44 @@ namespace CSharpWrapperHost_v020rc2dev
 
         public static ResultState Create(IDictionary config, DateTime start)
         {
-            ResultState r = new ResultState();
+            ResultState r = new ResultState(start);
             r.values["WrapperVersion"] = S(config, "WrapperVersion", "unknown");
             r.values["Implementation"] = "CSharpHost";
-            r.values["AppPath"] = S(config, "AppPath", null);
-            r.values["AppPid"] = null;
+            r.values["RunId"] = S(config, "RunId", null);
             r.values["StartTime"] = start;
             r.values["EndTime"] = null;
-            r.values["DurationMs"] = null;
-            r.values["TriggerReason"] = "Unknown";
-            r.values["FinalState"] = "Unknown";
+            r.values["CoreDurationMs"] = null;
+
+            r.values["TerminalTriggerKind"] = "Unknown";
+            r.values["TerminalTriggerAt"] = null;
+
+            r.values["AppPath"] = S(config, "AppPath", null);
+            r.values["AppPid"] = null;
+            r.values["AppStarted"] = false;
+            r.values["AppState"] = "NotStarted";
             r.values["AppExitCode"] = null;
             r.values["WasKilled"] = false;
-            r.values["TimedOut"] = false;
+            r.values["GracefulExitTimedOut"] = false;
+
+            r.values["WrapperState"] = "Unknown";
+
             r.values["CtrlCSentCount"] = 0;
             r.values["CtrlCUnresponsiveCount"] = 0;
             r.values["LastCtrlCSentAt"] = null;
             r.values["CloseEventReceived"] = false;
+            r.values["LogoffEventReceived"] = false;
             r.values["ShutdownEventReceived"] = false;
+            r.values["BreakEventReceived"] = false;
+
             r.values["StdoutBytes"] = 0L;
             r.values["OutputLines"] = 0;
-            r.values["PostActions"] = new object[0];
             r.values["CapturedOutput"] = "";
             return r;
+        }
+
+        private ResultState(DateTime start)
+        {
+            startPerfTicks = Stopwatch.GetTimestamp();
         }
 
         public bool TryBeginCtrlCAttempt()
@@ -640,47 +656,107 @@ namespace CSharpWrapperHost_v020rc2dev
             values.AddOrUpdate("CtrlCUnresponsiveCount", 1, delegate(string key, object oldValue) { return Convert.ToInt32(oldValue) + 1; });
         }
 
-        public bool TrySetTriggerReason(string reason)
+        public bool TrySetTerminalTrigger(string kind)
         {
             object current;
-            if (!values.TryGetValue("TriggerReason", out current) || current == null || Convert.ToString(current) == "Unknown")
+            if (!values.TryGetValue("TerminalTriggerKind", out current) || current == null || Convert.ToString(current) == "Unknown")
             {
-                values["TriggerReason"] = reason;
+                values["TerminalTriggerKind"] = kind;
+                values["TerminalTriggerAt"] = DateTimeOffset.Now.ToString("o", CultureInfo.InvariantCulture);
                 return true;
             }
             return false;
         }
 
-        public bool IsTriggerReason(string reason)
+        public bool IsTerminalTrigger(string kind)
         {
             object current;
-            return values.TryGetValue("TriggerReason", out current) && Convert.ToString(current) == reason;
+            return values.TryGetValue("TerminalTriggerKind", out current) && Convert.ToString(current) == kind;
         }
 
-        public bool IsFinalState(string state)
+        public bool IsAppState(string state)
         {
             object current;
-            return values.TryGetValue("FinalState", out current) && Convert.ToString(current) == state;
+            return values.TryGetValue("AppState", out current) && Convert.ToString(current) == state;
+        }
+
+        public bool IsWrapperState(string state)
+        {
+            object current;
+            return values.TryGetValue("WrapperState", out current) && Convert.ToString(current) == state;
         }
 
         public void AddError(string msg)
         {
-            if (msg != null) errors.Enqueue(msg);
-        }
-
-        public Hashtable ToHashtable()
-        {
-            Hashtable ht = new Hashtable(StringComparer.OrdinalIgnoreCase);
-            foreach (KeyValuePair<string, object> kv in values) ht[kv.Key] = kv.Value;
-            ht["Errors"] = errors.ToArray();
-            return ht;
+            if (msg != null) wrapperErrors.Enqueue(msg);
         }
 
         public void Complete(DateTime start)
         {
             DateTime end = DateTime.Now;
             values["EndTime"] = end;
-            values["DurationMs"] = (long)(end - start).TotalMilliseconds;
+            values["CoreDurationMs"] = (long)ElapsedMs(startPerfTicks);
+            if (IsWrapperState("Unknown")) values["WrapperState"] = "Completed";
+        }
+
+        public Hashtable ToHashtable()
+        {
+            Hashtable metadata = new Hashtable(StringComparer.OrdinalIgnoreCase);
+            metadata["WrapperVersion"] = Get("WrapperVersion");
+            metadata["Implementation"] = Get("Implementation");
+            metadata["RunId"] = Get("RunId");
+            metadata["StartTime"] = Get("StartTime");
+            metadata["EndTime"] = Get("EndTime");
+            metadata["CoreDurationMs"] = Get("CoreDurationMs");
+
+            Hashtable terminalTrigger = new Hashtable(StringComparer.OrdinalIgnoreCase);
+            terminalTrigger["Kind"] = Get("TerminalTriggerKind");
+            terminalTrigger["At"] = Get("TerminalTriggerAt");
+
+            Hashtable appState = new Hashtable(StringComparer.OrdinalIgnoreCase);
+            appState["Path"] = Get("AppPath");
+            appState["Pid"] = Get("AppPid");
+            appState["Started"] = Get("AppStarted");
+            appState["State"] = Get("AppState");
+            appState["ExitCode"] = Get("AppExitCode");
+            appState["WasKilled"] = Get("WasKilled");
+            appState["GracefulExitTimedOut"] = Get("GracefulExitTimedOut");
+
+            Hashtable wrapperState = new Hashtable(StringComparer.OrdinalIgnoreCase);
+            wrapperState["State"] = Get("WrapperState");
+            wrapperState["Errors"] = wrapperErrors.ToArray();
+
+            Hashtable eventAudit = new Hashtable(StringComparer.OrdinalIgnoreCase);
+            eventAudit["CtrlCSentCount"] = Get("CtrlCSentCount");
+            eventAudit["CtrlCUnresponsiveCount"] = Get("CtrlCUnresponsiveCount");
+            eventAudit["LastCtrlCSentAt"] = Get("LastCtrlCSentAt");
+            eventAudit["CloseEventReceived"] = Get("CloseEventReceived");
+            eventAudit["LogoffEventReceived"] = Get("LogoffEventReceived");
+            eventAudit["ShutdownEventReceived"] = Get("ShutdownEventReceived");
+            eventAudit["BreakEventReceived"] = Get("BreakEventReceived");
+
+            Hashtable postActions = new Hashtable(StringComparer.OrdinalIgnoreCase);
+            postActions["Items"] = new object[0];
+            postActions["Errors"] = new object[0];
+            postActions["DurationMs"] = null;
+
+            Hashtable ht = new Hashtable(StringComparer.OrdinalIgnoreCase);
+            ht["Metadata"] = metadata;
+            ht["TerminalTrigger"] = terminalTrigger;
+            ht["AppState"] = appState;
+            ht["WrapperState"] = wrapperState;
+            ht["EventAudit"] = eventAudit;
+            ht["PostActions"] = postActions;
+            ht["StdoutBytes"] = Get("StdoutBytes");
+            ht["OutputLines"] = Get("OutputLines");
+            ht["CapturedOutput"] = Get("CapturedOutput");
+            return ht;
+        }
+
+        private object Get(string key)
+        {
+            object value;
+            return values.TryGetValue(key, out value) ? value : null;
         }
 
         private static string S(IDictionary d, string key, string def)
@@ -740,7 +816,7 @@ namespace CSharpWrapperHost_v020rc2dev
                 string appPath = S(config, "AppPath", null);
                 if (String.IsNullOrWhiteSpace(appPath) || !File.Exists(appPath))
                 {
-                    result.TrySetTriggerReason("StartupFailed"); result["FinalState"] = "FailedToStart";
+                    result.TrySetTerminalTrigger("StartupFailed"); result["AppState"] = "StartFailed"; result["WrapperState"] = "StartupFailed";
                     result.AddError("AppPath not found: " + appPath); return result.ToHashtable();
                 }
                 Log(config, "=== Wrapper CSharpHost core started ===", "INFO");
@@ -748,6 +824,8 @@ namespace CSharpWrapperHost_v020rc2dev
                 Log(config, "AppArgsLine: " + (appArgsLine ?? ""), "INFO");
                 session = ConptySession.Start(appPath, appArgsLine, S(config, "WorkingDirectory", null), config["EnvironmentVariables"] as IDictionary, B(config, "InheritParentEnvironment", true), S(config, "OutputEncoding", "utf-8"));
                 result["AppPid"] = session.Pid;
+                result["AppStarted"] = true;
+                result["AppState"] = "Unknown";
                 Log(config, "Started app. PID=" + session.Pid, "INFO");
 
                 ConptySession closeSession = session;
@@ -788,8 +866,9 @@ namespace CSharpWrapperHost_v020rc2dev
                         Log(config, label + " captured. Entering best-effort path: send ETX 0x03, bounded wait, then optionally kill.", "WARN");
                         Log(config, trigger + " timing: handlerEntryLatencyMs=" + FmtMs(handlerEntryLatencyMs), "WARN");
                         if (isClose) result["CloseEventReceived"] = true;
-                        if (isLogoff || isShutdown) result["ShutdownEventReceived"] = true;
-                        result.TrySetTriggerReason(trigger);
+                        if (isLogoff) result["LogoffEventReceived"] = true;
+                        if (isShutdown) result["ShutdownEventReceived"] = true;
+                        result.TrySetTerminalTrigger(trigger);
                         if (closeSession != null && !closeSession.HasExited())
                         {
                             if (result.TryBeginCtrlCAttempt())
@@ -823,24 +902,17 @@ namespace CSharpWrapperHost_v020rc2dev
                             if (exited)
                             {
                                 try { bestEffortExitCode = closeSession.GetExitCode(); result["AppExitCode"] = bestEffortExitCode; } catch { }
-                                result["FinalState"] = "Exited";
+                                result["AppState"] = "Exited";
                             }
                             Log(config, trigger + " wait finished: exited=" + exited + ", exitCode=" + (bestEffortExitCode == null ? "null" : Convert.ToString(bestEffortExitCode)) + ", waitElapsedMs=" + FmtMs(waitElapsedMs), "WARN");
                             if (!exited)
                             {
-                                result["TimedOut"] = true;
-                                Log(config, trigger + " best-effort app wait expired. KillOnTimeout=" + B(config, "KillOnTimeout", true), "WARN");
-                                if (B(config, "KillOnTimeout", true))
-                                {
-                                    try {
-                                        closeSession.Kill(); result["WasKilled"] = true; result["FinalState"] = "Killed";
-                                        try { result["AppExitCode"] = closeSession.GetExitCode(); } catch { }
-                                    } catch { }
-                                }
-                                else
-                                {
-                                    result["FinalState"] = "Timeout";
-                                }
+                                result["GracefulExitTimedOut"] = true;
+                                Log(config, trigger + " best-effort app wait expired. App will be killed.", "WARN");
+                                try {
+                                    closeSession.Kill(); result["WasKilled"] = true; result["AppState"] = "Killed";
+                                    try { result["AppExitCode"] = closeSession.GetExitCode(); } catch { }
+                                } catch { }
                             }
 
                             long drainStartPerf = Stopwatch.GetTimestamp();
@@ -849,21 +921,23 @@ namespace CSharpWrapperHost_v020rc2dev
                         }
                         else
                         {
-                            result["FinalState"] = "Exited";
+                            result["AppState"] = "Exited";
                         }
                         running = false;
+                        result["WrapperState"] = "BestEffortCompleted";
                         Log(config, label + " best-effort path completed. PostActions/finally are not guaranteed after close/shutdown/logoff.", "WARN");
                     }
                     catch (Exception ex)
                     {
                         result.AddError(label + " best-effort path failed: " + ex);
-                        if (result.IsFinalState("Unknown")) result["FinalState"] = "Error";
+                        if (result.IsWrapperState("Unknown")) result["WrapperState"] = "Error";
                         try
                         {
                             if (closeSession != null && !closeSession.HasExited())
                             {
                                 closeSession.Kill();
                                 result["WasKilled"] = true;
+                                result["AppState"] = "Killed";
                             }
                         }
                         catch { }
@@ -945,8 +1019,9 @@ namespace CSharpWrapperHost_v020rc2dev
                         else if (sig == 1)
                         {
                             Log(config, "CTRL_BREAK_EVENT captured. Emergency abort.", "WARN");
-                            result.TrySetTriggerReason("Break"); result["FinalState"] = "Aborted";
-                            if (!session.HasExited()) { session.Kill(); result["WasKilled"] = true; }
+                            result["BreakEventReceived"] = true;
+                            result.TrySetTerminalTrigger("Break"); result["WrapperState"] = "Aborted";
+                            if (!session.HasExited()) { session.Kill(); result["WasKilled"] = true; result["AppState"] = "Killed"; }
                             running = false;
                         }
                         else
@@ -1002,13 +1077,13 @@ namespace CSharpWrapperHost_v020rc2dev
                     if (session.HasExited())
                     {
                         result["AppExitCode"] = session.GetExitCode();
-                        if (ctrlCSentPerfValid && (ctrlCAttemptActive || result.IsTriggerReason("CtrlClose")))
+                        if (ctrlCSentPerfValid && (ctrlCAttemptActive || result.IsTerminalTrigger("CtrlClose")))
                         {
                             Log(config, "Signal response timing: appExitAfterCtrlCSentMs=" + FmtMs(ElapsedMs(ctrlCSentPerfTicks)), "INFO");
                         }
-                        if (ctrlCAttemptActive) result.TrySetTriggerReason("CtrlC");
-                        else result.TrySetTriggerReason("AppExited");
-                        if (result.IsFinalState("Unknown")) result["FinalState"] = "Exited";
+                        if (ctrlCAttemptActive) result.TrySetTerminalTrigger("CtrlC");
+                        else result.TrySetTerminalTrigger("AppExited");
+                        if (result.IsAppState("Unknown")) result["AppState"] = "Exited";
                         long normalDrainStartPerf = Stopwatch.GetTimestamp();
                         int normalDrainMs = Math.Max(0, I(config, "NormalExitOutputDrainMilliseconds", 10000));
                         int normalQuietMs = Math.Max(0, I(config, "NormalExitOutputQuietMilliseconds", 250));
@@ -1038,28 +1113,24 @@ namespace CSharpWrapperHost_v020rc2dev
                         }
                         else
                         {
-                            result["TimedOut"] = true;
-                            result.TrySetTriggerReason("CtrlC");
-                            Log(config, "App did not exit within CtrlC grace period. CtrlCUnresponsivePolicy=Kill, KillOnTimeout=" + B(config, "KillOnTimeout", true), "WARN");
-                            if (B(config, "KillOnTimeout", true))
+                            result["GracefulExitTimedOut"] = true;
+                            result.TrySetTerminalTrigger("CtrlC");
+                            Log(config, "App did not exit within CtrlC grace period. CtrlCUnresponsivePolicy=Kill. App will be killed.", "WARN");
+                            session.Kill(); result["WasKilled"] = true; result["AppState"] = "Killed";
+                            Thread.Sleep(100); try { result["AppExitCode"] = session.GetExitCode(); } catch { }
+                            try
                             {
-                                session.Kill(); result["WasKilled"] = true; result["FinalState"] = "Killed";
-                                Thread.Sleep(100); try { result["AppExitCode"] = session.GetExitCode(); } catch { }
-                                try
-                                {
-                                    long killDrainStartPerf = Stopwatch.GetTimestamp();
-                                    session.ClosePseudoConsoleForOutputCompletion();
-                                    DrainOutputUntilComplete(config, session, true, KillOutputDrainMilliseconds, KillOutputQuietMilliseconds);
-                                    Log(config, "CtrlC timeout kill output drain completed: durationMs=" + FmtMs(ElapsedMs(killDrainStartPerf)) + ", budgetMs=" + KillOutputDrainMilliseconds + ", quietMs=" + KillOutputQuietMilliseconds + ", outputEof=" + session.OutputEof + ", queueEmpty=" + session.OutputQueueIsEmpty, "WARN");
-                                }
-                                catch (Exception ex)
-                                {
-                                    result.AddError("CtrlC timeout kill output drain failed: " + ex.Message);
-                                    try { Log(config, "CtrlC timeout kill output drain failed: " + ex, "WARN"); } catch { }
-                                }
-                                running = false;
+                                long killDrainStartPerf = Stopwatch.GetTimestamp();
+                                session.ClosePseudoConsoleForOutputCompletion();
+                                DrainOutputUntilComplete(config, session, true, KillOutputDrainMilliseconds, KillOutputQuietMilliseconds);
+                                Log(config, "CtrlC timeout kill output drain completed: durationMs=" + FmtMs(ElapsedMs(killDrainStartPerf)) + ", budgetMs=" + KillOutputDrainMilliseconds + ", quietMs=" + KillOutputQuietMilliseconds + ", outputEof=" + session.OutputEof + ", queueEmpty=" + session.OutputQueueIsEmpty, "WARN");
                             }
-                            else { result["FinalState"] = "Timeout"; try { result["AppExitCode"] = session.GetExitCode(); } catch { } running = false; }
+                            catch (Exception ex)
+                            {
+                                result.AddError("CtrlC timeout kill output drain failed: " + ex.Message);
+                                try { Log(config, "CtrlC timeout kill output drain failed: " + ex, "WARN"); } catch { }
+                            }
+                            running = false;
                         }
                     }
 
@@ -1068,9 +1139,9 @@ namespace CSharpWrapperHost_v020rc2dev
             }
             catch (Exception ex)
             {
-                result.TrySetTriggerReason("ScriptError"); result["FinalState"] = "Error"; result.AddError(ex.ToString());
+                result.TrySetTerminalTrigger("ScriptError"); result["WrapperState"] = "Error"; result.AddError(ex.ToString());
                 try { Log(config, "Wrapper error: " + ex, "ERROR"); } catch { }
-                if (session != null) { try { if (!session.HasExited()) { session.Kill(); result["WasKilled"] = true; } } catch { } }
+                if (session != null) { try { if (!session.HasExited()) { session.Kill(); result["WasKilled"] = true; result["AppState"] = "Killed"; } } catch { } }
             }
             finally
             {
@@ -1095,7 +1166,7 @@ namespace CSharpWrapperHost_v020rc2dev
                 {
                     int exitCode = result["AppExitCode"] == null ? 0 : Convert.ToInt32(result["AppExitCode"]);
                     string exitHex = result["AppExitCode"] == null ? "null" : "0x" + unchecked((uint)exitCode).ToString("X8");
-                    Log(config, "Result: TriggerReason=" + result["TriggerReason"] + ", FinalState=" + result["FinalState"] + ", ExitCode=" + result["AppExitCode"] + "(" + exitHex + "), WasKilled=" + result["WasKilled"] + ", TimedOut=" + result["TimedOut"], "INFO");
+                    Log(config, "Result: TerminalTrigger=" + result["TerminalTriggerKind"] + ", AppState=" + result["AppState"] + ", ExitCode=" + result["AppExitCode"] + "(" + exitHex + "), WasKilled=" + result["WasKilled"] + ", GracefulExitTimedOut=" + result["GracefulExitTimedOut"] + ", WrapperState=" + result["WrapperState"], "INFO");
                     Log(config, "=== Wrapper CSharpHost core ended ===", "INFO");
                 } catch { }
             }
@@ -1296,24 +1367,18 @@ try {
 $argLine = Join-WrapperCommandLineArgs -ArgumentList @($appArgsValue)
 $result = [CSharpWrapperHost_v020rc2dev.WrapperHost]::Run([System.Collections.IDictionary]$config, [string]$argLine)
 
-# Convert C# ArrayList errors to a normal PowerShell array to keep common helpers happy.
-if ($result.Errors -is [System.Collections.ArrayList]) {
-    $errors = @()
-    foreach ($e in $result.Errors) { $errors += [string]$e }
-    $result.Errors = $errors
-}
-
 $capturedOutput = [string]$result.CapturedOutput
 $result.Remove("CapturedOutput")
+$terminalKind = [string]$result.TerminalTrigger.Kind
 $skipBestEffortPostActions = (
-    ([string]$result.TriggerReason -eq "CtrlClose" -and $config.ContainsKey("CloseSkipPostActions") -and [bool]$config["CloseSkipPostActions"]) -or
-    (([string]$result.TriggerReason -eq "Shutdown" -or [string]$result.TriggerReason -eq "Logoff") -and $config.ContainsKey("ShutdownSkipPostActions") -and [bool]$config["ShutdownSkipPostActions"])
+    ($terminalKind -eq "CtrlClose" -and $config.ContainsKey("CloseSkipPostActions") -and [bool]$config["CloseSkipPostActions"]) -or
+    (($terminalKind -eq "Shutdown" -or $terminalKind -eq "Logoff") -and $config.ContainsKey("ShutdownSkipPostActions") -and [bool]$config["ShutdownSkipPostActions"])
 )
 if (-not $skipBestEffortPostActions) {
     $postActionStart = Get-Date
     Invoke-WrapperPostActions -Config $config -Result $result -CapturedOutput $capturedOutput | Out-Null
     $postActionElapsedMs = [int64](New-TimeSpan -Start $postActionStart -End (Get-Date)).TotalMilliseconds
-    $result["PostActionsDurationMs"] = $postActionElapsedMs
+    $result.PostActions.DurationMs = $postActionElapsedMs
     try {
         Write-WrapperLog -Config $config -Message "PostActions timing: durationMs=$postActionElapsedMs"
         Write-WrapperLog -Config $config -Message "=== Wrapper PowerShell post-actions ended ==="
@@ -1321,7 +1386,7 @@ if (-not $skipBestEffortPostActions) {
 }
 else {
     try {
-        Write-WrapperLog -Config $config -Level "WARN" -Message "Skipping PostActions for $($result.TriggerReason) best-effort path."
+        Write-WrapperLog -Config $config -Level "WARN" -Message "Skipping PostActions for $terminalKind best-effort path."
         Write-WrapperLog -Config $config -Message "=== Wrapper PowerShell post-actions skipped ==="
     } catch {}
 }
@@ -1355,6 +1420,6 @@ else {
     Clear-WrapperConsoleInputBuffer
 }
 
-if (@($result.Errors).Count -gt 0) { exit 2 }
-if ($result.FinalState -eq "FailedToStart" -or $result.FinalState -eq "Error") { exit 1 }
+if (@($result.WrapperState.Errors).Count -gt 0 -or @($result.PostActions.Errors).Count -gt 0) { exit 2 }
+if ($result.WrapperState.State -eq "StartupFailed" -or $result.WrapperState.State -eq "Error") { exit 1 }
 exit 0

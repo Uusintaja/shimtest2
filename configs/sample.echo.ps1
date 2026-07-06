@@ -16,7 +16,6 @@ return @{
     InputMode = "Line"
     CtrlCGracePeriodMs = 5000
     CtrlCUnresponsivePolicy = "Kill"
-    KillOnTimeout = $true
     EnableShutdownSentinel = $true
     StripAnsiSequences = $true
     PostActions = @(

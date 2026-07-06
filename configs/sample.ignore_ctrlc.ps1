@@ -14,10 +14,9 @@ return @{
     InputMode = "None"
     CtrlCGracePeriodMs = 2000
     CtrlCUnresponsivePolicy = "Kill"
-    KillOnTimeout = $true
     EnableShutdownSentinel = $true
     PostActions = @(
-        @{ Name="process was killed after ignored Ctrl+C"; Type="CustomPowerShell"; TreatFailureAsError=$true; ScriptBlock={ param($Config,$Result,$CapturedOutput) @{ Success = ([bool]$Result.WasKilled -and [bool]$Result.TimedOut); Message = "WasKilled=$($Result.WasKilled), TimedOut=$($Result.TimedOut)" } } },
+        @{ Name="process was killed after ignored Ctrl+C"; Type="CustomPowerShell"; TreatFailureAsError=$true; ScriptBlock={ param($Config,$Result,$CapturedOutput) @{ Success = ([bool]$Result.AppState.WasKilled -and [bool]$Result.AppState.GracefulExitTimedOut); Message = "WasKilled=$($Result.AppState.WasKilled), GracefulExitTimedOut=$($Result.AppState.GracefulExitTimedOut)" } } },
         @{ Name="output saw ignored Ctrl+C"; Type="RegexOutputContains"; Pattern="intentionally ignored"; TreatFailureAsError=$true }
     )
 }

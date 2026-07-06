@@ -120,15 +120,15 @@ $firstCollection = $ps.EndInvoke($async)
 $ps.Dispose()
 $firstResult = @($firstCollection)[0]
 
-$secondErrors = @($secondResult.Errors)
+$secondErrors = @($secondResult.WrapperState.Errors)
 $secondErrorText = ($secondErrors -join "`n")
 
-$firstOk = ($firstResult.FinalState -eq "Exited" -and [int]$firstResult.AppExitCode -eq 0 -and @($firstResult.Errors).Count -eq 0)
-$secondRejected = ($secondResult.FinalState -eq "Error" -and $secondErrorText -match "Concurrent WrapperHost\.Run calls")
+$firstOk = ($firstResult.AppState.State -eq "Exited" -and [int]$firstResult.AppState.ExitCode -eq 0 -and @($firstResult.WrapperState.Errors).Count -eq 0)
+$secondRejected = ($secondResult.WrapperState.State -eq "Error" -and $secondErrorText -match "Concurrent WrapperHost\.Run calls")
 
 Write-Host "=== Unsupported concurrent Run test summary ==="
-Write-Host "First run    : FinalState=$($firstResult.FinalState), AppExitCode=$($firstResult.AppExitCode), Errors=$(@($firstResult.Errors).Count)"
-Write-Host "Second run   : FinalState=$($secondResult.FinalState), Errors=$(@($secondResult.Errors).Count)"
+Write-Host "First run    : AppState=$($firstResult.AppState.State), AppExitCode=$($firstResult.AppState.ExitCode), Errors=$(@($firstResult.WrapperState.Errors).Count)"
+Write-Host "Second run   : WrapperState=$($secondResult.WrapperState.State), Errors=$(@($secondResult.WrapperState.Errors).Count)"
 Write-Host "Rejected msg : $($secondErrorText -replace "`r?`n", " | ")"
 
 if (-not $firstOk) {

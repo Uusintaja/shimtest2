@@ -82,7 +82,6 @@ Supported values:
 | `CtrlCGracePeriodMs` | policy-dependent | Supported | Grace period after forwarding Ctrl+C. If omitted: `Kill` policy uses 5000ms; `Continue` policy uses 1000ms. |
 | `CtrlCUnresponsivePolicy` | `"Kill"` | Supported | Action when app does not exit within CtrlC grace period: `Kill` or `Continue`. |
 | `EnableCtrlBreakEmergencyExit` | `$true` | Supported | Ctrl+Break is emergency abort, not forwarded as graceful Ctrl+C. |
-| `KillOnTimeout` | `$true` | Supported | Kill child on timeout in Ctrl+C/Close/Shutdown paths. |
 
 Ctrl+C unresponsive policy:
 
@@ -233,8 +232,8 @@ If an external `Enter-PSHostProcess` script reports `0x280`, first confirm that 
 `sample.bulk_output.ctrlc.ps1` is for interrupted Ctrl+C testing and expects:
 
 ```text
-TriggerReason = CtrlC
-AppExitCode = -1073741510 / 0xC000013A
-WasKilled = False
-TimedOut = False
+TerminalTrigger.Kind = CtrlC
+AppState.ExitCode = -1073741510 / 0xC000013A
+AppState.WasKilled = False
+AppState.GracefulExitTimedOut = False
 ```

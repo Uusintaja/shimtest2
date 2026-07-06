@@ -58,7 +58,6 @@ function New-WrapperDefaultConfig {
         # Kill => 5000ms, Continue => 1000ms.
         CtrlCGracePeriodMs = $null
         CtrlCUnresponsivePolicy = "Kill" # Kill / Continue
-        KillOnTimeout = $true
 
         # Signal handling
         EnableCtrlCForwarding = $true
@@ -315,7 +314,8 @@ function Add-WrapperError {
         [Parameter(Mandatory=$true)] [string]$Message
     )
 
-    $Result.Errors += @($Message)
+    if ($Result.WrapperState -isnot [hashtable]) { $Result.WrapperState = @{ State = "Error"; Errors = @() } }
+    $Result.WrapperState.Errors += @($Message)
 }
 
 function Get-WrapperTextEncoding {
@@ -487,6 +487,9 @@ function Invoke-WrapperPostActions {
     if ($Config.ContainsKey("PostActions") -and $null -ne $Config.PostActions) {
         $actions = @($Config.PostActions)
     }
+    if ($Result.PostActions -isnot [hashtable]) {
+        $Result.PostActions = @{ Items = @(); Errors = @(); DurationMs = $null }
+    }
 
     foreach ($action in $actions) {
         $type = [string]$action.Type
@@ -522,12 +525,13 @@ function Invoke-WrapperPostActions {
 
                 "ExitCodeEquals" {
                     $expected = [int]$action.ExpectedExitCode
-                    if ($null -ne $Result.AppExitCode -and [int]$Result.AppExitCode -eq $expected) {
+                    $actualExitCode = $Result.AppState.ExitCode
+                    if ($null -ne $actualExitCode -and [int]$actualExitCode -eq $expected) {
                         $record.Success = $true
                         $record.Message = "Exit code matched: $expected"
                     }
                     else {
-                        $record.Message = "Exit code mismatch. Expected=$expected, Actual=$($Result.AppExitCode)"
+                        $record.Message = "Exit code mismatch. Expected=$expected, Actual=$actualExitCode"
                     }
                 }
 
@@ -568,13 +572,16 @@ function Invoke-WrapperPostActions {
             $record.Message = "Post action failed with exception: $_"
         }
 
-        $Result.PostActions += @($record)
+        if ($Result.PostActions -isnot [hashtable]) {
+            $Result.PostActions = @{ Items = @(); Errors = @(); DurationMs = $null }
+        }
+        $Result.PostActions.Items += @($record)
         if (-not $record.Success -and $treatFailureAsError) {
-            Add-WrapperError -Result $Result -Message "PostAction '$name' failed: $($record.Message)"
+            $Result.PostActions.Errors += @("PostAction '$name' failed: $($record.Message)")
         }
     }
 
-    return $Result.PostActions
+    return $Result.PostActions.Items
 }
 
 
@@ -611,17 +618,20 @@ function Show-WrapperResultSummary {
     )
 
     Write-Host "=== Wrapper Result ==="
-    Write-Host "Implementation : $($Result.Implementation)"
-    Write-Host "TriggerReason  : $($Result.TriggerReason)"
-    Write-Host "FinalState     : $($Result.FinalState)"
-    Write-Host "AppExitCode    : $($Result.AppExitCode)"
-    Write-Host "WasKilled      : $($Result.WasKilled)"
-    Write-Host "TimedOut       : $($Result.TimedOut)"
-    Write-Host "DurationMs     : $($Result.DurationMs)"
-    Write-Host "Errors         : $(@($Result.Errors).Count)"
-    if (@($Result.PostActions).Count -gt 0) {
+    Write-Host "Implementation  : $($Result.Metadata.Implementation)"
+    Write-Host "Version         : $($Result.Metadata.WrapperVersion)"
+    Write-Host "RunId           : $($Result.Metadata.RunId)"
+    Write-Host "TerminalTrigger : $($Result.TerminalTrigger.Kind)"
+    Write-Host "AppState        : $($Result.AppState.State)"
+    Write-Host "AppExitCode     : $($Result.AppState.ExitCode)"
+    Write-Host "WasKilled       : $($Result.AppState.WasKilled)"
+    Write-Host "GraceTimeout    : $($Result.AppState.GracefulExitTimedOut)"
+    Write-Host "WrapperState    : $($Result.WrapperState.State)"
+    Write-Host "CoreDurationMs  : $($Result.Metadata.CoreDurationMs)"
+    Write-Host "Errors          : $(@($Result.WrapperState.Errors).Count + @($Result.PostActions.Errors).Count)"
+    if ($Result.PostActions -is [hashtable] -and @($Result.PostActions.Items).Count -gt 0) {
         Write-Host "PostActions:"
-        foreach ($pa in $Result.PostActions) {
+        foreach ($pa in $Result.PostActions.Items) {
             $status = if ($pa.Success) { "PASS" } else { "FAIL" }
             Write-Host "  [$status] $($pa.Name): $($pa.Message)"
         }

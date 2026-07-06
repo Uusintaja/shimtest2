@@ -84,17 +84,20 @@ function Assert-BoundaryResult {
         [Parameter(Mandatory=$true)] [string]$Name
     )
 
-    if ($Result.Implementation -ne "CSharpHost") {
-        throw "[$Name] Expected Implementation=CSharpHost, actual=$($Result.Implementation)"
+    if ($Result.Metadata.Implementation -ne "CSharpHost") {
+        throw "[$Name] Expected Implementation=CSharpHost, actual=$($Result.Metadata.Implementation)"
     }
-    if ($Result.FinalState -ne "Exited") {
-        throw "[$Name] Expected FinalState=Exited, actual=$($Result.FinalState)"
+    if ($Result.AppState.State -ne "Exited") {
+        throw "[$Name] Expected AppState.State=Exited, actual=$($Result.AppState.State)"
     }
-    if ([int]$Result.AppExitCode -ne 0) {
-        throw "[$Name] Expected AppExitCode=0, actual=$($Result.AppExitCode)"
+    if ([int]$Result.AppState.ExitCode -ne 0) {
+        throw "[$Name] Expected AppExitCode=0, actual=$($Result.AppState.ExitCode)"
     }
-    if (@($Result.Errors).Count -ne 0) {
-        throw "[$Name] Expected Errors.Count=0, actual=$(@($Result.Errors).Count)"
+    if (@($Result.WrapperState.Errors).Count -ne 0) {
+        throw "[$Name] Expected WrapperState.Errors.Count=0, actual=$(@($Result.WrapperState.Errors).Count)"
+    }
+    if (@($Result.PostActions.Errors).Count -ne 0) {
+        throw "[$Name] Expected PostActions.Errors.Count=0, actual=$(@($Result.PostActions.Errors).Count)"
     }
 }
 

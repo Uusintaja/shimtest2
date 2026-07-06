@@ -59,7 +59,7 @@ A future production packaging option may extract the C# host into a precompiled 
 | Test | Program | Purpose | PowerShellMain | CSharpHost | Notes |
 |---|---|---|---:|---:|---|
 | T1 | `stdown/app.exe` | Realtime output, Ctrl+C forwarding, env var, file post-action | PASS | PASS | `output.txt=done`; app receives Ctrl+C. |
-| T2 | `ignore_ctrlc.exe` | App ignores Ctrl+C; timeout + kill | PASS | PASS | `WasKilled=True`, `TimedOut=True`, exit code `-1`. |
+| T2 | `ignore_ctrlc.exe` | App ignores Ctrl+C; timeout + kill | PASS | PASS | `AppState.WasKilled=True`, `AppState.GracefulExitTimedOut=True`, exit code `-1`. |
 | T3 | `bulk_output.exe` | Large output drain and capture | PASS | PASS | `bulk-line:19999` captured. |
 | T4 | `exit_code.exe` | AppArgs and exit-code propagation | PASS | PASS | 7, 6, -6 tested after 0.1.7 fix. |
 | T5 | `stderr_output.exe` | ConPTY terminal stream includes stdout/stderr | PASS | PASS | Both stdout/stderr patterns captured. |
@@ -90,11 +90,11 @@ Host Ctrl+C
 `ignore_ctrlc.exe` intentionally returns `TRUE` from its Ctrl+C handler and keeps running. Both wrappers correctly:
 
 ```text
-TriggerReason = CtrlC
-FinalState    = Killed
-WasKilled     = True
-TimedOut      = True
-AppExitCode   = -1 / 0xFFFFFFFF
+TerminalTrigger.Kind = CtrlC
+AppState.State = Killed
+AppState.WasKilled = True
+AppState.GracefulExitTimedOut = True
+AppState.ExitCode = -1 / 0xFFFFFFFF
 ```
 
 Duplicate Ctrl+C is now handled by recursive-signal guard logging:
@@ -108,7 +108,7 @@ Duplicate CTRL_C_EVENT captured while Ctrl+C is already being processed. Ignored
 For programs with no custom Ctrl+C handler, such as `no_output_sleep.exe`, pressing Ctrl+C causes default control-event termination:
 
 ```text
-AppExitCode = -1073741510
+AppState.ExitCode = -1073741510
 Hex         = 0xC000013A
 Meaning     = STATUS_CONTROL_C_EXIT
 ```

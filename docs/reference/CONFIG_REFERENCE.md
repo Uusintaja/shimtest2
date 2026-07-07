@@ -213,7 +213,7 @@ CustomPowerShell
 
 ## 11. Shutdown priority verification
 
-CSharpHost 0.2.0-rc1 hardcodes shutdown priority to application first-shutdown level `0x3FF` with flags `0`, then verifies the actual values in the same wrapper process via `GetProcessShutdownParameters`.
+CSharpHost 0.2.0-rc2-dev hardcodes shutdown priority to application first-shutdown level `0x3FF` with flags `0`, then verifies the actual values in the same wrapper process via `GetProcessShutdownParameters`.
 
 Expected log example:
 

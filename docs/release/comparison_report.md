@@ -507,3 +507,32 @@ Template:
 ```text
 configs/vaultwarden.template.ps1
 ```
+
+
+## 17. RunRecord schema validation
+
+The flat result schema was replaced in the rc2-dev hardening line by a structured RunRecord model:
+
+```text
+Metadata
+EventAudit
+TerminalTrigger
+AppState
+WrapperState
+PostActions
+StdoutBytes
+OutputLines
+```
+
+Validation result:
+
+- `stdown Ctrl+C` passed.
+- `ignore_ctrlc` Kill path passed.
+- `ctrlc_counter` Continue path passed.
+- Close regression passed.
+- `validate-release` passed.
+
+Decision:
+
+- RunRecord model is accepted as successful.
+- Minor JSON formatting cosmetics are deferred and are not release/hardening blockers unless they block automation.

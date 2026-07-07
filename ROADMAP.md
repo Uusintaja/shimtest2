@@ -318,7 +318,7 @@ Validation pending:
 
 
 ## Step 10.9 - RunRecord schema restructuring
-Status: In Progress - implementation completed, validation pending
+Status: Done
 Current working version: 0.2.0-rc2-dev
 
 Implemented:
@@ -326,10 +326,13 @@ Implemented:
 - Removed active TriggerReason/FinalState/root AppExitCode/root WasKilled/root TimedOut schema.
 - Kept StdoutBytes and OutputLines at root for future IO model work.
 
-Validation pending:
-- validate-release
-- run-tests non-interactive
-- stdown Ctrl+C
-- ignore_ctrlc kill path
-- ctrlc_counter continue path
-- boundary tests if time permits
+Validated:
+- validate-release PASS
+- stdown Ctrl+C PASS
+- ignore_ctrlc Kill path PASS
+- ctrlc_counter Continue path PASS
+- Close regression PASS
+
+Notes:
+- JSON schema is accepted as successful.
+- Cosmetic JSON formatter polish is deferred; do not continue spending core hardening time on it unless it blocks automation.

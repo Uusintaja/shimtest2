@@ -18,6 +18,10 @@ None until validation feedback arrives.
 
 ## Deferred
 
+### JSON formatter polish
+
+Status: Deferred. RunRecord schema is accepted; further JSON formatting work should not continue unless it blocks automation or user-facing consumption.
+
 ### Remaining first hardening batch
 
 Deferred until after current execution/testing:
@@ -53,6 +57,7 @@ Pending triage after current validation:
 
 ## Done
 
+- RunRecord model accepted after validation; JSON formatter cosmetic polish deferred.
 - RunRecord schema restructuring implemented: Metadata, EventAudit, TerminalTrigger, AppState, WrapperState, PostActions.
 - LastCtrlCSentAt precision improved to ISO 8601 string for Ctrl+C audit logs/results.
 - Ctrl+C unresponsive policy implemented: Kill/Continue, grace period config, ctrlc_counter test fixture.

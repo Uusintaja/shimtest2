@@ -26,6 +26,41 @@ Primary implementation: `wrapper-csharphost.ps1` / CSharpHost
 | Reserved | Future extension point; do not use in production rc1 configs. |
 | Removed | Former idea/key removed from public config. |
 
+
+---
+
+## 1.2 RunRecord result schema
+
+CSharpHost returns a structured post-run `RunRecord` for offline analysis. It is not a real-time monitor and not an event replay log.
+
+Current top-level objects/fields:
+
+```text
+Metadata
+EventAudit
+TerminalTrigger
+AppState
+WrapperState
+PostActions
+StdoutBytes
+OutputLines
+```
+
+Primary meanings:
+
+| Object | Meaning |
+|---|---|
+| `Metadata` | Wrapper identity and wall-clock run metadata. |
+| `EventAudit` | Selected event facts observed during the run. |
+| `TerminalTrigger` | Event/condition that caused the wrapper to enter terminal exit flow. |
+| `AppState` | Observed lifecycle state of the wrapped app process. |
+| `WrapperState` | Observed lifecycle state of the wrapper session itself. |
+| `PostActions` | PowerShell post-action results, errors, and duration. |
+
+Known presentation note:
+
+Windows PowerShell 5.1 JSON formatting may not be as compact or aesthetically consistent as modern serializers. The schema is the contract; cosmetic JSON formatting polish is deferred unless it blocks automation.
+
 ## 2. Startup configuration
 
 | Key | Default | Status | Description |

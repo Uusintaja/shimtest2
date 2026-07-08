@@ -580,6 +580,29 @@ namespace CSharpWrapperHost_v020rc2dev
         }
     }
 
+    internal static class TimeUtil
+    {
+        public static double ElapsedMs(long startTimestamp)
+        {
+            return (Stopwatch.GetTimestamp() - startTimestamp) * 1000.0 / Stopwatch.Frequency;
+        }
+
+        public static double ElapsedMs(long startTimestamp, long endTimestamp)
+        {
+            return (endTimestamp - startTimestamp) * 1000.0 / Stopwatch.Frequency;
+        }
+
+        public static long DeadlineFromNowMs(int milliseconds)
+        {
+            return Stopwatch.GetTimestamp() + (long)(Math.Max(0, milliseconds) * Stopwatch.Frequency / 1000.0);
+        }
+
+        public static string FmtMs(double milliseconds)
+        {
+            return milliseconds.ToString("F6", CultureInfo.InvariantCulture);
+        }
+    }
+
     internal sealed class ResultState
     {
         private readonly ConcurrentDictionary<string, object> values = new ConcurrentDictionary<string, object>(StringComparer.OrdinalIgnoreCase);
@@ -695,7 +718,7 @@ namespace CSharpWrapperHost_v020rc2dev
         {
             DateTime end = DateTime.Now;
             values["EndTime"] = end;
-            values["CoreDurationMs"] = (long)((Stopwatch.GetTimestamp() - startPerfTicks) * 1000.0 / Stopwatch.Frequency);
+            values["CoreDurationMs"] = (long)TimeUtil.ElapsedMs(startPerfTicks);
             if (IsWrapperState("Unknown")) values["WrapperState"] = "Completed";
         }
 
@@ -776,22 +799,22 @@ namespace CSharpWrapperHost_v020rc2dev
 
         private static double ElapsedMs(long startTimestamp)
         {
-            return (Stopwatch.GetTimestamp() - startTimestamp) * 1000.0 / Stopwatch.Frequency;
+            return TimeUtil.ElapsedMs(startTimestamp);
         }
 
         private static double ElapsedMs(long startTimestamp, long endTimestamp)
         {
-            return (endTimestamp - startTimestamp) * 1000.0 / Stopwatch.Frequency;
+            return TimeUtil.ElapsedMs(startTimestamp, endTimestamp);
         }
 
         private static long DeadlineFromNowMs(int milliseconds)
         {
-            return Stopwatch.GetTimestamp() + (long)(Math.Max(0, milliseconds) * Stopwatch.Frequency / 1000.0);
+            return TimeUtil.DeadlineFromNowMs(milliseconds);
         }
 
         private static string FmtMs(double milliseconds)
         {
-            return milliseconds.ToString("F6", CultureInfo.InvariantCulture);
+            return TimeUtil.FmtMs(milliseconds);
         }
 
         public static Hashtable Run(IDictionary config, string appArgsLine)
@@ -1308,7 +1331,7 @@ namespace CSharpWrapperHost_v020rc2dev
             string path = S(config, "LogFilePath", null); if (String.IsNullOrWhiteSpace(path)) return;
             string runId = S(config, "RunId", null);
             string runPrefix = String.IsNullOrWhiteSpace(runId) ? "" : "[RunId=" + runId + "]";
-            string line = "[" + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") + "][" + level + "]" + runPrefix + " " + message + Environment.NewLine;
+            string line = runPrefix + "[" + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") + "][" + level + "] " + message + Environment.NewLine;
             try { AppendTextShared(path, line, Encoding.UTF8, LogFileLock); } catch { }
         }
         private static void AppendAppOutputLog(IDictionary config, string text)
@@ -1346,6 +1369,7 @@ if (-not $config.ContainsKey("RunId") -or [string]::IsNullOrWhiteSpace([string]$
     $config["RunId"] = ((Get-Date).ToString("yyyyMMdd-HHmmss-fff") + "-" + ([guid]::NewGuid().ToString("N").Substring(0, 8)))
 }
 Write-WrapperLog -Config $config -Message "=== Wrapper PowerShell entry started. RunId=$($config["RunId"]) ==="
+Write-WrapperLog -Config $config -Message "Loading and asserting configuration from Path: $ConfigPath"
 $appArgsValue = if ($config.ContainsKey("AppArgs")) { $config["AppArgs"] } else { @() }
 try { Write-WrapperLog -Config $config -Message "AppArgsRawCount: $(@($appArgsValue).Count); AppArgsRaw: $(@($appArgsValue) -join ' | ')" } catch {}
 try {

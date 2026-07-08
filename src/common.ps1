@@ -411,7 +411,7 @@ function Write-WrapperLog {
             $runPrefix = "[RunId=$($Config["RunId"])]"
         }
     } catch {}
-    $line = "[$timestamp][$Level]$runPrefix $Message"
+    $line = "$runPrefix[$timestamp][$Level] $Message"
 
     $path = $Config.LogFilePath
     if ([string]::IsNullOrWhiteSpace([string]$path)) { return }
@@ -425,6 +425,86 @@ function Write-WrapperLog {
     }
 }
 
+function Get-WrapperJsonOrderedKeys {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)] [System.Collections.IDictionary]$InputDictionary
+    )
+
+    $knownOrders = @(
+        @("Metadata", "EventAudit", "TerminalTrigger", "AppState", "WrapperState", "PostActions", "StdoutBytes", "OutputLines", "CapturedOutput"),
+        @("WrapperVersion", "Implementation", "RunId", "StartTime", "EndTime", "CoreDurationMs"),
+        @("CtrlCSentCount", "CtrlCUnresponsiveCount", "LastCtrlCSentAt", "CloseEventReceived", "LogoffEventReceived", "ShutdownEventReceived", "BreakEventReceived"),
+        @("Kind", "At"),
+        @("Path", "Pid", "Started", "State", "ExitCode", "WasKilled", "GracefulExitTimedOut"),
+        @("State", "Errors"),
+        @("Items", "Errors", "DurationMs"),
+        @("Name", "Type", "Success", "Message")
+    )
+
+    $keys = @($InputDictionary.Keys)
+    $selectedOrder = $null
+    $selectedScore = -1
+    foreach ($order in $knownOrders) {
+        $score = 0
+        foreach ($key in $order) {
+            if ($InputDictionary.Contains($key)) { $score++ }
+        }
+        if ($score -gt $selectedScore) {
+            $selectedScore = $score
+            $selectedOrder = $order
+        }
+    }
+
+    $result = @()
+    foreach ($key in $selectedOrder) {
+        if ($InputDictionary.Contains($key)) { $result += $key }
+    }
+
+    foreach ($key in ($keys | Where-Object { $result -notcontains $_ } | Sort-Object)) {
+        $result += $key
+    }
+
+    return $result
+}
+
+function ConvertTo-WrapperJsonOrderedObject {
+    <#
+    .SYNOPSIS
+        Converts unordered dictionaries to ordered PowerShell objects before ConvertTo-Json.
+
+    .DESCRIPTION
+        This is intentionally not a custom JSON serializer. String escaping and JSON emission remain
+        owned by ConvertTo-Json; this helper only gives PowerShell 5.1 a stable object/property order.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$false)]
+        [AllowNull()]
+        $InputObject
+    )
+
+    if ($null -eq $InputObject) { return $null }
+
+    if ($InputObject -is [System.Collections.IDictionary]) {
+        $ordered = [ordered]@{}
+        foreach ($key in (Get-WrapperJsonOrderedKeys -InputDictionary $InputObject)) {
+            $ordered[[string]$key] = ConvertTo-WrapperJsonOrderedObject -InputObject $InputObject[$key]
+        }
+        return [pscustomobject]$ordered
+    }
+
+    if ($InputObject -is [System.Collections.IEnumerable] -and $InputObject -isnot [string]) {
+        $items = @()
+        foreach ($item in $InputObject) {
+            $items += ConvertTo-WrapperJsonOrderedObject -InputObject $item
+        }
+        return $items
+    }
+
+    return $InputObject
+}
+
 function ConvertTo-WrapperJson {
     <#
     .SYNOPSIS
@@ -436,7 +516,8 @@ function ConvertTo-WrapperJson {
         [int]$Depth = 8
     )
 
-    return ($InputObject | ConvertTo-Json -Depth $Depth)
+    $orderedObject = ConvertTo-WrapperJsonOrderedObject -InputObject $InputObject
+    return ($orderedObject | ConvertTo-Json -Depth $Depth)
 }
 
 function Test-WrapperFileContentEquals {
@@ -465,6 +546,24 @@ function Test-WrapperFileContentEquals {
     }
 
     return @{ Success = $false; Message = "File content mismatch: $path. Expected=[$expected], Actual=[$actual]" }
+}
+
+function ConvertTo-WrapperDisplayPreview {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$false)]
+        [AllowNull()]
+        [string]$Text,
+        [int]$MaxLength = 160
+    )
+
+    if ($null -eq $Text) { return "<null>" }
+    $preview = $Text.Replace("`r", "\r").Replace("`n", "\n").Replace("`t", "\t")
+    $preview = [regex]::Replace($preview, "[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]", "?")
+    if ($MaxLength -gt 0 -and $preview.Length -gt $MaxLength) {
+        return ($preview.Substring(0, $MaxLength) + "...<truncated>")
+    }
+    return $preview
 }
 
 function Invoke-WrapperPostActions {
@@ -539,10 +638,11 @@ function Invoke-WrapperPostActions {
                     $pattern = [string]$action.Pattern
                     if ($CapturedOutput -match $pattern) {
                         $record.Success = $true
-                        $record.Message = "Captured output matched regex: $pattern"
+                        $matchedText = ConvertTo-WrapperDisplayPreview -Text ([string]$Matches[0]) -MaxLength 160
+                        $record.Message = "Captured output matched expected pattern. MatchedText=[$matchedText]"
                     }
                     else {
-                        $record.Message = "Captured output did not match regex: $pattern"
+                        $record.Message = "Captured output did not contain expected pattern."
                     }
                 }
 

@@ -6,7 +6,7 @@ Current phase: post-rc hardening (`0.2.0-rc2-dev`).
 
 ## Active discussion
 
-Router instance architecture refactor executed. Awaiting user validation.
+None. Awaiting Windows validation for Round 13 RunRecord cleanup.
 
 ---
 
@@ -57,6 +57,7 @@ Pending triage after current validation:
 
 ## Done
 
+- Round 13 RunRecord cleanup implemented: wrapper log prefix order is `[RunId][TIME][LEVEL]`, PowerShell entry logs config path, CoreDurationMs uses shared C# timing helper, JSON ordering uses dictionary-to-ordered-object conversion before `ConvertTo-Json`, and RegexOutputContains messages avoid raw regex pattern dumps.
 - RunRecord model accepted after validation; JSON formatter cosmetic polish deferred.
 - RunRecord schema restructuring implemented: Metadata, EventAudit, TerminalTrigger, AppState, WrapperState, PostActions.
 - LastCtrlCSentAt precision improved to ISO 8601 string for Ctrl+C audit logs/results.

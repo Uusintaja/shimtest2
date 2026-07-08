@@ -336,3 +336,5 @@ Validated:
 Notes:
 - JSON schema is accepted as successful.
 - Cosmetic JSON formatter polish is deferred; do not continue spending core hardening time on it unless it blocks automation.
+- Round 13 cleanup keeps JSON emission on PowerShell `ConvertTo-Json`; only unordered dictionary-to-ordered-object conversion is allowed before serialization.
+- Round 13 cleanup also targets wrapper log prefix order, PowerShell config-path entry logging, shared CoreDurationMs timing helper usage, and human-readable RegexOutputContains messages.

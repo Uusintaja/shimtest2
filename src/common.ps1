@@ -425,90 +425,15 @@ function Write-WrapperLog {
     }
 }
 
-function Get-WrapperJsonOrderedKeys {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory=$true)] [System.Collections.IDictionary]$InputDictionary
-    )
-
-    $knownOrders = @(
-        @("Metadata", "EventAudit", "TerminalTrigger", "AppState", "WrapperState", "PostActions", "StdoutBytes", "OutputLines", "CapturedOutput"),
-        @("WrapperVersion", "Implementation", "RunId", "StartTime", "EndTime", "CoreDurationMs"),
-        @("CtrlCSentCount", "CtrlCUnresponsiveCount", "LastCtrlCSentAt", "CloseEventReceived", "LogoffEventReceived", "ShutdownEventReceived", "BreakEventReceived"),
-        @("Kind", "At"),
-        @("Path", "Pid", "Started", "State", "ExitCode", "WasKilled", "GracefulExitTimedOut"),
-        @("State", "Errors"),
-        @("Items", "Errors", "DurationMs"),
-        @("Name", "Type", "Success", "Message")
-    )
-
-    $keys = @($InputDictionary.Keys)
-    $selectedOrder = $null
-    $selectedScore = -1
-    foreach ($order in $knownOrders) {
-        $score = 0
-        foreach ($key in $order) {
-            if ($InputDictionary.Contains($key)) { $score++ }
-        }
-        if ($score -gt $selectedScore) {
-            $selectedScore = $score
-            $selectedOrder = $order
-        }
-    }
-
-    $result = @()
-    foreach ($key in $selectedOrder) {
-        if ($InputDictionary.Contains($key)) { $result += $key }
-    }
-
-    foreach ($key in ($keys | Where-Object { $result -notcontains $_ } | Sort-Object)) {
-        $result += $key
-    }
-
-    return $result
-}
-
-function ConvertTo-WrapperJsonOrderedObject {
-    <#
-    .SYNOPSIS
-        Converts unordered dictionaries to ordered PowerShell objects before ConvertTo-Json.
-
-    .DESCRIPTION
-        This is intentionally not a custom JSON serializer. String escaping and JSON emission remain
-        owned by ConvertTo-Json; this helper only gives PowerShell 5.1 a stable object/property order.
-    #>
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory=$false)]
-        [AllowNull()]
-        $InputObject
-    )
-
-    if ($null -eq $InputObject) { return $null }
-
-    if ($InputObject -is [System.Collections.IDictionary]) {
-        $ordered = [ordered]@{}
-        foreach ($key in (Get-WrapperJsonOrderedKeys -InputDictionary $InputObject)) {
-            $ordered[[string]$key] = ConvertTo-WrapperJsonOrderedObject -InputObject $InputObject[$key]
-        }
-        return [pscustomobject]$ordered
-    }
-
-    if ($InputObject -is [System.Collections.IEnumerable] -and $InputObject -isnot [string]) {
-        $items = @()
-        foreach ($item in $InputObject) {
-            $items += ConvertTo-WrapperJsonOrderedObject -InputObject $item
-        }
-        return $items
-    }
-
-    return $InputObject
-}
-
 function ConvertTo-WrapperJson {
     <#
     .SYNOPSIS
         Converts a wrapper object to JSON in PowerShell 5.1-compatible way.
+
+    .DESCRIPTION
+        This is intentionally not a custom JSON serializer. String escaping and JSON emission remain
+        owned by ConvertTo-Json; local helpers only convert unordered dictionaries to ordered objects
+        so RunRecord JSON has stable property order in Windows PowerShell 5.1.
     #>
     [CmdletBinding()]
     param(
@@ -516,7 +441,79 @@ function ConvertTo-WrapperJson {
         [int]$Depth = 8
     )
 
-    $orderedObject = ConvertTo-WrapperJsonOrderedObject -InputObject $InputObject
+    function Get-OrderedKeys {
+        [CmdletBinding()]
+        param(
+            [Parameter(Mandatory=$true)] [System.Collections.IDictionary]$InputDictionary
+        )
+
+        $knownOrders = @(
+            @("Metadata", "EventAudit", "TerminalTrigger", "AppState", "WrapperState", "PostActions", "StdoutBytes", "OutputLines", "CapturedOutput"),
+            @("WrapperVersion", "Implementation", "RunId", "StartTime", "EndTime", "CoreDurationMs"),
+            @("CtrlCSentCount", "CtrlCUnresponsiveCount", "LastCtrlCSentAt", "CloseEventReceived", "LogoffEventReceived", "ShutdownEventReceived", "BreakEventReceived"),
+            @("Kind", "At"),
+            @("Path", "Pid", "Started", "State", "ExitCode", "WasKilled", "GracefulExitTimedOut"),
+            @("State", "Errors"),
+            @("Items", "Errors", "DurationMs"),
+            @("Name", "Type", "Success", "Message")
+        )
+
+        $keys = @($InputDictionary.Keys)
+        $selectedOrder = $null
+        $selectedScore = -1
+        foreach ($order in $knownOrders) {
+            $score = 0
+            foreach ($key in $order) {
+                if ($InputDictionary.Contains($key)) { $score++ }
+            }
+            if ($score -gt $selectedScore) {
+                $selectedScore = $score
+                $selectedOrder = $order
+            }
+        }
+
+        $result = @()
+        foreach ($key in $selectedOrder) {
+            if ($InputDictionary.Contains($key)) { $result += $key }
+        }
+
+        foreach ($key in ($keys | Where-Object { $result -notcontains $_ } | Sort-Object)) {
+            $result += $key
+        }
+
+        return ,$result
+    }
+
+    function ConvertTo-OrderedObject {
+        [CmdletBinding()]
+        param(
+            [Parameter(Mandatory=$false)]
+            [AllowNull()]
+            $Object
+        )
+
+        if ($null -eq $Object) { return $null }
+
+        if ($Object -is [System.Collections.IDictionary]) {
+            $ordered = [ordered]@{}
+            foreach ($key in (Get-OrderedKeys -InputDictionary $Object)) {
+                $ordered[[string]$key] = ConvertTo-OrderedObject -Object $Object[$key]
+            }
+            return [pscustomobject]$ordered
+        }
+
+        if ($Object -is [System.Collections.IEnumerable] -and $Object -isnot [string]) {
+            $items = @()
+            foreach ($item in $Object) {
+                $items += ConvertTo-OrderedObject -Object $item
+            }
+            return ,$items
+        }
+
+        return $Object
+    }
+
+    $orderedObject = ConvertTo-OrderedObject -Object $InputObject
     return ($orderedObject | ConvertTo-Json -Depth $Depth)
 }
 

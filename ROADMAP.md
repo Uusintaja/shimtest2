@@ -332,6 +332,7 @@ Validated:
 - ignore_ctrlc Kill path PASS
 - ctrlc_counter Continue path PASS
 - Close regression PASS
+- Round 13 cleanup validation PASS: validate-release non-interactive regression check, args_env JSON/Regex/AppArgs check, wrapper log order check, stdown test, and ignore_ctrlc Kill path.
 
 Notes:
 - JSON schema is accepted as successful.
